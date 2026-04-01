@@ -18,6 +18,7 @@ const Sidebar = (() => {
         document.getElementById('btn-prev').addEventListener('click', prev);
         document.getElementById('btn-next').addEventListener('click', next);
         document.getElementById('btn-export').addEventListener('click', _exportCurrent);
+        document.getElementById('btn-export-complete').addEventListener('click', _exportComplete);
         document.getElementById('btn-export-all').addEventListener('click', _exportAll);
         document.getElementById('chk-complete').addEventListener('change', _toggleComplete);
 
@@ -151,6 +152,20 @@ const Sidebar = (() => {
             }
         } catch (err) {
             App.toast('Export failed', 'error');
+        }
+    }
+
+    async function _exportComplete() {
+        try {
+            const resp = await fetch('/api/export/complete', { method: 'POST' });
+            const data = await resp.json();
+            if (data.count === 0) {
+                App.toast('No complete areas to export', 'info');
+            } else {
+                App.toast(`Exported ${data.count} complete areas`, 'success');
+            }
+        } catch (err) {
+            App.toast('Export complete failed', 'error');
         }
     }
 

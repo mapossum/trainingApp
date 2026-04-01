@@ -39,6 +39,7 @@
                 </div>
                 <div id="export-controls">
                     <button id="btn-export">Export Current</button>
+                    <button id="btn-export-complete">Export Complete</button>
                     <button id="btn-export-all">Export All</button>
                 </div>
             </div>
@@ -51,9 +52,12 @@
                     <button id="btn-draw" class="tool-btn" title="Draw polygon (D)">Draw</button>
                     <button id="btn-freehand" class="tool-btn" title="Freehand polygon (F)">Freehand</button>
                     <button id="btn-sam" class="tool-btn" title="SAM2 click-to-segment (S)">SAM2</button>
+                    <button id="btn-select" class="tool-btn" title="Select polygons (Q)">Select</button>
                     <button id="btn-edit" class="tool-btn" title="Edit vertices (E)">Edit</button>
                     <button id="btn-delete" class="tool-btn" title="Delete polygon (X)">Delete</button>
+                    <button id="btn-undo" class="tool-btn" title="Undo (Ctrl+Z)" style="opacity:0.5">Undo</button>
                     <button id="btn-dissolve" class="tool-btn" title="Dissolve overlapping polygons of same class">Dissolve</button>
+                    <button id="btn-model-predict" class="tool-btn" title="Run model prediction on current area (M)">Predict</button>
                 </div>
             </div>
         </div>
@@ -67,7 +71,9 @@
     <script src="/static/js/annotations.js"></script>
     <script src="/static/js/drawing.js"></script>
     <script src="/static/js/sam.js"></script>
+    <script src="/static/js/select.js"></script>
     <script src="/static/js/sidebar.js"></script>
+    <script src="/static/js/model_predict.js"></script>
     <script src="/static/js/app.js"></script>
 </body>
 </html>

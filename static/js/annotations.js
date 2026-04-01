@@ -1,10 +1,12 @@
-// Annotations module — GeoJSON layer management and auto-save
+// Annotations module — GeoJSON layer management, auto-save, undo, erase
 const Annotations = (() => {
     let _map = null;
     let _layer = null;
     let _currentAreaId = null;
     let _saveTimeout = null;
     let _onChangeCallback = null;
+    let _undoStack = [];
+    const UNDO_MAX = 5;
 
     function init(map) {
         _map = map;
@@ -29,6 +31,11 @@ const Annotations = (() => {
     function _onEachFeature(feature, layer) {
         layer.on('click', (e) => {
             L.DomEvent.stopPropagation(e);
+            // If Select mode is active, delegate to Select module
+            if (typeof Select !== 'undefined' && Select.isActive()) {
+                Select.toggleFeature(layer);
+                return;
+            }
             _showPopup(feature, layer, e.latlng);
         });
     }
@@ -57,6 +64,7 @@ const Annotations = (() => {
             const del = document.getElementById('popup-delete');
             if (sel) {
                 sel.addEventListener('change', () => {
+                    pushUndo();
                     const newValue = parseInt(sel.value);
                     const cls = Classes.getByValue(newValue);
                     feature.properties.class_value = newValue;
@@ -68,6 +76,7 @@ const Annotations = (() => {
             }
             if (del) {
                 del.addEventListener('click', () => {
+                    pushUndo();
                     _layer.removeLayer(layer);
                     _map.closePopup();
                     _scheduleSave();
@@ -79,6 +88,8 @@ const Annotations = (() => {
     async function loadForArea(areaId) {
         _currentAreaId = areaId;
         _layer.clearLayers();
+        _undoStack = [];
+        _updateUndoButton();
 
         const resp = await fetch(`/api/annotations/${areaId}`);
         const fc = await resp.json();
@@ -89,8 +100,13 @@ const Annotations = (() => {
     }
 
     function addFeature(geojsonFeature) {
+        pushUndo();
         _layer.addData(geojsonFeature);
         _scheduleSave();
+    }
+
+    function removeLayer(layer) {
+        _layer.removeLayer(layer);
     }
 
     function getLayer() {
@@ -154,6 +170,7 @@ const Annotations = (() => {
     async function dissolveOverlapping() {
         if (!_currentAreaId) return;
 
+        pushUndo();
         // Save current state first
         await _save();
 
@@ -170,7 +187,6 @@ const Annotations = (() => {
             }
             if (_onChangeCallback) _onChangeCallback();
 
-            const before = getFeatureCollection().features.length;
             App.toast(`Dissolved to ${fc.features.length} polygons`, 'success');
         } catch (err) {
             console.error('Dissolve failed:', err);
@@ -178,5 +194,74 @@ const Annotations = (() => {
         }
     }
 
-    return { init, loadForArea, addFeature, getLayer, getFeatureCollection, triggerSave, onChange, refreshStyles, dissolveOverlapping };
+    // --- Erase ---
+
+    async function eraseWithPolygon(geometry) {
+        if (!_currentAreaId) return;
+
+        pushUndo();
+        await _save();
+
+        try {
+            const resp = await fetch(`/api/annotations/${_currentAreaId}/erase`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ geometry: geometry }),
+            });
+            const fc = await resp.json();
+
+            _layer.clearLayers();
+            if (fc.features && fc.features.length > 0) {
+                _layer.addData(fc);
+            }
+            if (_onChangeCallback) _onChangeCallback();
+
+            App.toast('Erased', 'success');
+        } catch (err) {
+            console.error('Erase failed:', err);
+            App.toast('Erase failed', 'error');
+        }
+    }
+
+    // --- Undo ---
+
+    function pushUndo() {
+        const snapshot = getFeatureCollection();
+        _undoStack.push(JSON.parse(JSON.stringify(snapshot)));
+        if (_undoStack.length > UNDO_MAX) {
+            _undoStack.shift();
+        }
+        _updateUndoButton();
+    }
+
+    function undo() {
+        if (_undoStack.length === 0) return;
+
+        const snapshot = _undoStack.pop();
+        _layer.clearLayers();
+        if (snapshot.features && snapshot.features.length > 0) {
+            _layer.addData(snapshot);
+        }
+        _scheduleSave();
+        _updateUndoButton();
+        App.toast('Undone', 'info');
+    }
+
+    function _updateUndoButton() {
+        const btn = document.getElementById('btn-undo');
+        if (!btn) return;
+        const count = _undoStack.length;
+        btn.textContent = count > 0 ? `Undo (${count})` : 'Undo';
+        btn.style.opacity = count > 0 ? '1' : '0.5';
+    }
+
+    function getUndoCount() {
+        return _undoStack.length;
+    }
+
+    return {
+        init, loadForArea, addFeature, removeLayer, getLayer, getFeatureCollection,
+        triggerSave, onChange, refreshStyles, dissolveOverlapping,
+        eraseWithPolygon, pushUndo, undo, getUndoCount,
+    };
 })();

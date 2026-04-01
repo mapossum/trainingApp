@@ -542,6 +542,96 @@ body {
     to { stroke-dashoffset: -10; }
 }
 
+/* Erase class button */
+.class-btn.erase-btn {
+    background: repeating-linear-gradient(
+        45deg,
+        #c0392b,
+        #c0392b 4px,
+        #e74c3c 4px,
+        #e74c3c 8px
+    ) !important;
+    border: 2px solid transparent;
+}
+
+.class-btn.erase-btn.active {
+    border-color: white;
+    opacity: 1;
+}
+
+/* Select action bar */
+#select-action-bar {
+    position: absolute;
+    top: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(41, 128, 185, 0.92);
+    padding: 8px 16px;
+    border-radius: 8px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.4);
+}
+
+.select-action-label {
+    color: white;
+    font-size: 13px;
+    font-weight: bold;
+    margin-right: 4px;
+}
+
+#select-class-dropdown {
+    padding: 4px 8px;
+    font-size: 12px;
+    border: 1px solid #1a5276;
+    border-radius: 4px;
+    background: #1a5276;
+    color: white;
+}
+
+.select-action-btn {
+    padding: 5px 14px;
+    font-size: 12px;
+    font-weight: bold;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    color: white;
+}
+
+.select-apply-btn {
+    background: #27ae60;
+}
+
+.select-apply-btn:hover {
+    background: #219a52;
+}
+
+.select-delete-btn {
+    background: #e74c3c;
+}
+
+.select-delete-btn:hover {
+    background: #c0392b;
+}
+
+.select-clear-btn {
+    background: #7f8c8d;
+}
+
+.select-clear-btn:hover {
+    background: #6c7a7d;
+}
+
+/* Select mode button active state */
+.tool-btn.select-active {
+    background: #2980b9;
+    color: white;
+    border-color: #2980b9;
+}
+
 /* Toast notifications */
 #toast-container {
     position: fixed;

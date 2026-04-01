@@ -8,6 +8,7 @@ import annotation_store
 import dataset_config as dscfg
 import export
 import sam2_predictor
+import model_predictor
 from tiff_manager import TiffManager
 
 app = Flask(__name__)
@@ -44,6 +45,9 @@ def initialize():
     _sam2_service = sam2_predictor.get_service()
     _sam2_ready = _sam2_service is not None
     logger.info(f"SAM2 available: {_sam2_ready}")
+
+    logger.info("Scanning for prediction models...")
+    model_predictor.init(config.MODELS_DIR)
 
 
 @app.route('/')
@@ -371,6 +375,126 @@ def sam2_predict():
         return jsonify({"error": str(e)}), 500
 
 
+@app.route('/api/annotations/<area_id>/erase', methods=['POST'])
+def erase_annotations(area_id):
+    """Erase (clip) existing annotations using an erase polygon."""
+    from shapely.geometry import shape, mapping
+    from shapely.ops import unary_union
+
+    data = request.get_json()
+    erase_geom = data.get('geometry')
+    if not erase_geom:
+        return jsonify({"error": "geometry required"}), 400
+
+    try:
+        erase_poly = shape(erase_geom)
+        if not erase_poly.is_valid:
+            erase_poly = erase_poly.buffer(0)
+    except Exception as e:
+        return jsonify({"error": f"Invalid erase geometry: {e}"}), 400
+
+    fc = annotation_store.load_annotations(area_id)
+    features = fc.get("features", [])
+    if not features:
+        return jsonify(fc)
+
+    new_features = []
+    for f in features:
+        try:
+            poly = shape(f["geometry"])
+            if not poly.is_valid:
+                poly = poly.buffer(0)
+
+            if erase_poly.contains(poly):
+                # Fully contained — remove entirely
+                continue
+
+            if not erase_poly.intersects(poly):
+                # No overlap — keep as-is
+                new_features.append(f)
+                continue
+
+            # Partial overlap — clip
+            clipped = poly.difference(erase_poly)
+            if not clipped.is_valid:
+                clipped = clipped.buffer(0)
+
+            if clipped.is_empty:
+                continue
+
+            props = dict(f.get("properties", {}))
+
+            # Handle MultiPolygon results from clipping
+            if clipped.geom_type == 'MultiPolygon':
+                for geom in clipped.geoms:
+                    if not geom.is_empty:
+                        new_features.append({
+                            "type": "Feature",
+                            "geometry": mapping(geom),
+                            "properties": dict(props),
+                        })
+            elif clipped.geom_type == 'Polygon':
+                new_features.append({
+                    "type": "Feature",
+                    "geometry": mapping(clipped),
+                    "properties": props,
+                })
+        except Exception:
+            # Keep feature unchanged if clipping fails
+            new_features.append(f)
+
+    result = {
+        "type": "FeatureCollection",
+        "properties": {"area_id": area_id},
+        "features": new_features,
+    }
+
+    annotation_store.save_annotations(area_id, result)
+    before = len(features)
+    after = len(new_features)
+    logger.info(f"Erase {area_id}: {before} -> {after} features")
+
+    return jsonify(result)
+
+
+@app.route('/api/models')
+def get_models():
+    models = model_predictor.get_available_models()
+    return jsonify({"models": models})
+
+
+@app.route('/api/model-predict', methods=['POST'])
+def model_predict():
+    import traceback
+
+    data = request.get_json()
+    area_id = data.get('area_id')
+    model_name = data.get('model_name')
+    overlap = data.get('overlap', 64)
+
+    if not area_id or not model_name:
+        return jsonify({"error": "area_id and model_name required"}), 400
+
+    area = tiff_mgr.get_area(area_id)
+    if not area:
+        return jsonify({"error": "Area not found"}), 404
+
+    try:
+        features = model_predictor.predict(
+            model_name=model_name,
+            tiff_path=area['tiff_path'],
+            transform=area['transform'],
+            native_crs=area['native_crs'],
+            horizontal_crs=area['horizontal_crs'],
+            pixel_size=abs(area['transform'].a),
+            overlap=overlap,
+        )
+        return jsonify({"features": features, "count": len(features)})
+    except Exception as e:
+        logger.error(f"Model prediction error: {traceback.format_exc()}")
+        return jsonify({"error": str(e)}), 500
+
+
 @app.route('/api/export/<area_id>', methods=['POST'])
 def export_area(area_id):
     result = export.export_area(area_id, tiff_mgr)
@@ -382,6 +506,12 @@ def export_area(area_id):
         "geojson": geojson_path,
         "shapefile": shp_path
     })
+
+
+@app.route('/api/export/complete', methods=['POST'])
+def export_complete():
+    exported = export.export_complete(tiff_mgr)
+    return jsonify({"status": "ok", "exported": exported, "count": len(exported)})
 
 
 @app.route('/api/export/all', methods=['POST'])

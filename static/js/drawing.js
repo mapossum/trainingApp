@@ -24,6 +24,13 @@ const Drawing = (() => {
 
             const cls = Classes.getActive();
             const geojson = e.layer.toGeoJSON(15);
+
+            // Erase mode: use drawn polygon to clip existing annotations
+            if (Classes.isEraseActive()) {
+                Annotations.eraseWithPolygon(geojson.geometry);
+                return;
+            }
+
             const feature = {
                 type: "Feature",
                 geometry: geojson.geometry,
@@ -53,6 +60,7 @@ const Drawing = (() => {
 
     function toggleDraw() {
         if (typeof SAM !== 'undefined') SAM.deactivate();
+        if (typeof Select !== 'undefined') Select.deactivate();
         _deactivateFreehand();
         _deactivateEdit();
         _deactivateDelete();
@@ -91,6 +99,7 @@ const Drawing = (() => {
 
     function toggleFreehand() {
         if (typeof SAM !== 'undefined') SAM.deactivate();
+        if (typeof Select !== 'undefined') Select.deactivate();
         _deactivateDraw();
         _deactivateEdit();
         _deactivateDelete();
@@ -177,13 +186,22 @@ const Drawing = (() => {
 
         const cls = Classes.getActive();
         const coords = simplified.map(p => [p.lng, p.lat]);
+        const geometry = {
+            type: "Polygon",
+            coordinates: [coords],
+        };
+
+        // Erase mode: use drawn polygon to clip existing annotations
+        if (Classes.isEraseActive()) {
+            Annotations.eraseWithPolygon(geometry);
+            _freehandPoints = [];
+            _removeFreehandPolyline();
+            return;
+        }
 
         const feature = {
             type: "Feature",
-            geometry: {
-                type: "Polygon",
-                coordinates: [coords],
-            },
+            geometry: geometry,
             properties: {
                 class_name: cls.name,
                 class_value: cls.value,
@@ -254,6 +272,7 @@ const Drawing = (() => {
         _deactivateFreehand();
         _deactivateDelete();
         if (typeof SAM !== 'undefined') SAM.deactivate();
+        if (typeof Select !== 'undefined') Select.deactivate();
 
         if (_editActive) {
             _deactivateEdit();
@@ -263,6 +282,7 @@ const Drawing = (() => {
     }
 
     function _activateEdit() {
+        Annotations.pushUndo();
         Annotations.getLayer().eachLayer(layer => {
             layer.pm.enable({ allowSelfIntersection: false });
         });
@@ -292,6 +312,7 @@ const Drawing = (() => {
         _deactivateFreehand();
         _deactivateEdit();
         if (typeof SAM !== 'undefined') SAM.deactivate();
+        if (typeof Select !== 'undefined') Select.deactivate();
 
         if (_deleteActive) {
             _deactivateDelete();
@@ -306,6 +327,7 @@ const Drawing = (() => {
         document.getElementById('btn-delete').classList.add('active');
 
         _map.on('pm:remove', (e) => {
+            Annotations.pushUndo();
             Annotations.triggerSave();
         });
     }

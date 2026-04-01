@@ -180,23 +180,31 @@ const SAM = (() => {
     function _accept() {
         if (!_previewLayer) return;
 
-        const cls = Classes.getActive();
-        _previewLayer.eachLayer(layer => {
-            const geojson = layer.toGeoJSON(15);
-            const feature = {
-                type: "Feature",
-                geometry: geojson.geometry,
-                properties: {
-                    class_name: cls.name,
-                    class_value: cls.value,
-                    source: "sam2",
-                    id: Math.random().toString(36).substring(2, 10),
-                },
-            };
-            Annotations.addFeature(feature);
-        });
-
-        App.toast('Polygon accepted', 'success');
+        if (Classes.isEraseActive()) {
+            // Erase mode: use SAM prediction to clip existing annotations
+            _previewLayer.eachLayer(layer => {
+                const geojson = layer.toGeoJSON(15);
+                Annotations.eraseWithPolygon(geojson.geometry);
+            });
+            App.toast('Erased with SAM polygon', 'success');
+        } else {
+            const cls = Classes.getActive();
+            _previewLayer.eachLayer(layer => {
+                const geojson = layer.toGeoJSON(15);
+                const feature = {
+                    type: "Feature",
+                    geometry: geojson.geometry,
+                    properties: {
+                        class_name: cls.name,
+                        class_value: cls.value,
+                        source: "sam2",
+                        id: Math.random().toString(36).substring(2, 10),
+                    },
+                };
+                Annotations.addFeature(feature);
+            });
+            App.toast('Polygon accepted', 'success');
+        }
         _clearPreview();
         _clearMarkers();
         _points = [];

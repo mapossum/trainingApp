@@ -23,7 +23,9 @@ const App = (() => {
         Annotations.init(_map);
         Drawing.init(_map);
         await SAM.init(_map);
+        Select.init(_map);
         await DatasetConfig.init();
+        await ModelPredict.init(_map);
         Sidebar.init(areas, state);
 
         // Refresh image when band/stretch settings change
@@ -46,6 +48,11 @@ const App = (() => {
             Annotations.dissolveOverlapping();
         });
 
+        // Undo button
+        document.getElementById('btn-undo').addEventListener('click', () => {
+            Annotations.undo();
+        });
+
         // Load last viewed area or first area
         if (state.last_viewed && areas.find(a => a.id === state.last_viewed)) {
             Sidebar.goToArea(state.last_viewed);
@@ -61,6 +68,7 @@ const App = (() => {
         // Deactivate all tools
         Drawing.deactivateAll();
         if (SAM.isActive()) SAM.deactivate();
+        if (Select.isActive()) Select.deactivate();
 
         await MapModule.loadArea(areaId);
         await Annotations.loadForArea(areaId);
@@ -76,6 +84,13 @@ const App = (() => {
     function _onKeyDown(e) {
         // Ignore if typing in an input
         if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') {
+            return;
+        }
+
+        // Ctrl+Z for undo
+        if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+            e.preventDefault();
+            Annotations.undo();
             return;
         }
 
@@ -108,6 +123,19 @@ const App = (() => {
             case 'S':
                 SAM.toggle();
                 break;
+            case 'q':
+            case 'Q':
+                Select.toggle();
+                break;
+            case 'm':
+            case 'M':
+                if (!Drawing.isActive() && !SAM.isActive()) {
+                    ModelPredict.run();
+                }
+                break;
+            case '0':
+                Classes.setErase();
+                break;
             case 'Enter':
                 if (SAM.isActive()) {
                     SAM.acceptCurrent();
@@ -118,6 +146,7 @@ const App = (() => {
             case 'Escape':
                 Drawing.deactivateAll();
                 if (SAM.isActive()) SAM.deactivate();
+                if (Select.isActive()) Select.deactivate();
                 break;
             case 'z':
             case 'Z':

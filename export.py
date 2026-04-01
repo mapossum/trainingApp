@@ -63,3 +63,26 @@ def export_all(tiff_manager):
             exported.append(area_id)
 
     return exported
+
+
+def export_complete(tiff_manager):
+    """Export areas marked as complete that have annotations. Returns list of exported area_ids."""
+    exported = []
+    state = annotation_store.load_state()
+    complete_map = state.get("complete", {})
+
+    annotations_dir = config.ANNOTATIONS_DIR
+    if not os.path.isdir(annotations_dir):
+        return exported
+
+    for fname in os.listdir(annotations_dir):
+        if not fname.endswith('.geojson'):
+            continue
+        area_id = fname[:-8]
+        if not complete_map.get(area_id, False):
+            continue
+        result = export_area(area_id, tiff_manager)
+        if result:
+            exported.append(area_id)
+
+    return exported
