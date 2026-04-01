@@ -14,6 +14,7 @@ data/trainingPolygons/*
 data/annotations/*
 !data/annotations/.gitkeep
 data/app_state.json
+data/dataset_config.json
 
 # SAM2 model weights (large, ~150MB+)
 sam2_weights/*.pt
