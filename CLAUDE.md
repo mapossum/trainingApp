@@ -28,7 +28,8 @@ taskkill /F /IM python.exe
 ### Backend (Python/Flask)
 - `app.py` — Flask server, all API routes, SAM2 prediction pipeline
 - `config.py` — Path constants (DATA_DIR, TIFF_DIR, ANNOTATIONS_DIR, etc.)
-- `tiff_manager.py` — Scans trainingTiffs/, parses filenames, renders PNGs, handles compound CRS (EPSG:32620 UTM Zone 20N with vertical datum)
+- `dataset_config.py` — Auto-detects TIFF properties (bands, dtype, stretch), persists to `data/dataset_config.json`. See `DATASET_CONFIG.md` for full reference
+- `tiff_manager.py` — Scans trainingTiffs/, parses filenames, renders PNGs with configurable band selection and stretch, handles any CRS via pyproj
 - `annotation_store.py` — GeoJSON CRUD for annotations + app state persistence
 - `sam2_predictor.py` — SAM2 model loading with auto-config detection from checkpoint filename
 - `export.py` — Exports annotations to GeoJSON + Shapefile with CRS reprojection
@@ -46,21 +47,22 @@ taskkill /F /IM python.exe
 ### Data Structure
 ```
 data/
-  config.json               # Class definitions: 5 classes (palmata, palmata bleached, mounding, other, other bleached)
+  config.json               # Class definitions (e.g., 5 coral classes)
+  dataset_config.json       # Auto-generated: band mapping, stretch, nodata (see DATASET_CONFIG.md)
   annotations/              # Working GeoJSON per area (EPSG:4326)
   app_state.json            # Completion flags, last viewed, sort preference
   trainingPolygons/         # Export destination (native CRS)
-  trainingTiffs/            # 201 GeoTIFFs + .tfw, .ovr, .aux.xml sidecar files
+  trainingTiffs/            # GeoTIFFs (any band count, any CRS, any bit depth)
 sam2_weights/               # SAM2 checkpoint (.pt file)
 ```
 
 ### TIFF Format
-- **Naming**: `{OrthoName}_OID{number}.tif` — OrthoName is everything before `_OID`, number is the feature class OID
-- **OIDs are NOT unique** across orthos — the full filename stem is the unique key
-- **CRS**: Compound CRS (EPSG:32620 + vertical). `_get_horizontal_crs()` extracts the projected component via pyproj
-- **Bands**: 3-band RGB, uint16, values 0-255 with nodata=256
-- **Size**: ~1045x1046 pixels, ~1cm resolution, ~10m x 10m ground coverage
-- **Rendering**: First 3 bands always read as RGB, clip to uint8, nodata -> transparent alpha
+- **Naming**: Any `.tif` file is accepted. `{OrthoName}_OID{number}.tif` pattern is parsed for ortho_name/oid metadata when present; otherwise the filename stem is the unique key
+- **CRS**: Any CRS supported by rasterio/pyproj. Compound CRS (projected + vertical) handled via `_get_horizontal_crs()`
+- **Bands**: Any band count supported. Display bands are configurable via `dataset_config.json` — 3 bands are selected for RGB display and SAM2 input
+- **Bit depth**: uint8, uint16, int16, float32, float64. Stretch method in `dataset_config.json` maps values to 0-255 for display
+- **Nodata**: Auto-detected from TIFF metadata or set in `dataset_config.json`. Nodata pixels rendered as transparent
+- **Rendering**: Configurable band selection + stretch -> uint8 RGB -> warp to EPSG:4326 -> RGBA PNG
 
 ### API Routes
 
@@ -68,10 +70,13 @@ sam2_weights/               # SAM2 checkpoint (.pt file)
 |--------|-------|---------|
 | GET | `/` | Serve index.html |
 | GET | `/api/config` | Class definitions from config.json |
+| GET | `/api/dataset-config` | Dataset config (bands, stretch, nodata) |
+| PUT | `/api/dataset-config` | Update dataset config (partial merge, auto-recalculates stretch) |
+| POST | `/api/dataset-config/redetect` | Force re-detect config from TIFFs |
 | GET | `/api/training-areas` | All areas with metadata, bounds, annotation counts |
 | GET | `/api/state` | App state (completion, last viewed, sort) |
 | POST | `/api/state` | Update app state (partial merge) |
-| GET | `/api/tiff/<id>/image.png` | TIFF rendered as RGBA PNG |
+| GET | `/api/tiff/<id>/image.png` | TIFF rendered as RGBA PNG (uses dataset config) |
 | GET | `/api/tiff/<id>/bounds` | Bounds in EPSG:4326 for Leaflet |
 | GET | `/api/annotations/<id>` | Load area annotations (GeoJSON) |
 | PUT | `/api/annotations/<id>` | Save full FeatureCollection (auto-save) |

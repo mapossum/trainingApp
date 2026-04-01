@@ -6,6 +6,7 @@ TIFF_DIR = os.path.join(DATA_DIR, 'trainingTiffs')
 ANNOTATIONS_DIR = os.path.join(DATA_DIR, 'annotations')
 EXPORT_DIR = os.path.join(DATA_DIR, 'trainingPolygons')
 CONFIG_PATH = os.path.join(DATA_DIR, 'config.json')
+DATASET_CONFIG_PATH = os.path.join(DATA_DIR, 'dataset_config.json')
 STATE_PATH = os.path.join(DATA_DIR, 'app_state.json')
 SAM2_WEIGHTS_DIR = os.path.join(BASE_DIR, 'sam2_weights')
 

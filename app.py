@@ -5,6 +5,7 @@ from flask import Flask, render_template, jsonify, request, send_file
 
 import config
 import annotation_store
+import dataset_config as dscfg
 import export
 import sam2_predictor
 from tiff_manager import TiffManager
@@ -25,6 +26,13 @@ logger = logging.getLogger('training_app')
 def initialize():
     """Initialize TIFF manager and SAM2. Called once before serving."""
     global tiff_mgr, _sam2_service, _sam2_ready
+
+    logger.info("Auto-detecting dataset configuration...")
+    sys.stdout.flush()
+    ds_cfg = dscfg.auto_detect()
+    logger.info(f"Dataset config: {ds_cfg['band_count']} bands, "
+                f"display={ds_cfg['display_bands']}, "
+                f"stretch={ds_cfg['stretch']['method']}")
 
     logger.info("Initializing TIFF manager...")
     sys.stdout.flush()
@@ -48,6 +56,72 @@ def get_config():
     with open(config.CONFIG_PATH, 'r') as f:
         classes = json.load(f)
     return jsonify(classes)
+
+
+@app.route('/api/dataset-config')
+def get_dataset_config():
+    cfg = dscfg.load()
+    if cfg is None:
+        cfg = dscfg.auto_detect()
+    return jsonify(cfg)
+
+
+@app.route('/api/dataset-config', methods=['PUT'])
+def update_dataset_config():
+    updates = request.get_json()
+    cfg = dscfg.load()
+    if cfg is None:
+        cfg = dscfg.auto_detect()
+
+    changed_bands = False
+    changed_stretch = False
+
+    if 'display_bands' in updates:
+        cfg['display_bands'] = updates['display_bands']
+        changed_bands = True
+
+    if 'stretch' in updates:
+        for key in ('method', 'percentile_min', 'percentile_max'):
+            if key in updates['stretch']:
+                cfg['stretch'][key] = updates['stretch'][key]
+                changed_stretch = True
+        # Allow direct min/max override
+        if 'band_mins' in updates['stretch']:
+            cfg['stretch']['band_mins'] = updates['stretch']['band_mins']
+            changed_stretch = True
+        if 'band_maxs' in updates['stretch']:
+            cfg['stretch']['band_maxs'] = updates['stretch']['band_maxs']
+            changed_stretch = True
+
+    # Recalculate stretch if bands changed but mins/maxs weren't explicitly set
+    if changed_bands and 'band_mins' not in updates.get('stretch', {}):
+        cfg = dscfg.recalculate_stretch(
+            display_bands=cfg['display_bands'],
+            method=cfg['stretch']['method'],
+            percentile_min=cfg['stretch']['percentile_min'],
+            percentile_max=cfg['stretch']['percentile_max'],
+        )
+    elif changed_stretch and 'band_mins' not in updates.get('stretch', {}):
+        cfg = dscfg.recalculate_stretch(
+            method=cfg['stretch']['method'],
+            percentile_min=cfg['stretch']['percentile_min'],
+            percentile_max=cfg['stretch']['percentile_max'],
+        )
+    else:
+        dscfg.save(cfg)
+
+    # Clear render caches so new settings take effect
+    tiff_mgr.clear_render_cache()
+
+    return jsonify(cfg)
+
+
+@app.route('/api/dataset-config/redetect', methods=['POST'])
+def redetect_dataset_config():
+    """Force re-detection of dataset properties from TIFFs."""
+    cfg = dscfg.auto_detect(force=True)
+    tiff_mgr.clear_render_cache()
+    return jsonify(cfg)
 
 
 @app.route('/api/training-areas')
