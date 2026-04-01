@@ -6,7 +6,7 @@ __pycache__/
 dist/
 build/
 
-# Data (large files — user-specific, keep .gitkeep placeholders)
+# Data directories (large files — user-specific, keep .gitkeep placeholders)
 data/trainingTiffs/*
 !data/trainingTiffs/.gitkeep
 data/trainingPolygons/*
@@ -15,6 +15,9 @@ data/annotations/*
 !data/annotations/.gitkeep
 data/app_state.json
 data/dataset_config.json
+
+# Additional data directories (same structure)
+data_*/
 
 # SAM2 model weights (large, ~150MB+)
 sam2_weights/*.pt

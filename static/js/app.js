@@ -23,7 +23,14 @@ const App = (() => {
         Annotations.init(_map);
         Drawing.init(_map);
         await SAM.init(_map);
+        await DatasetConfig.init();
         Sidebar.init(areas, state);
+
+        // Refresh image when band/stretch settings change
+        DatasetConfig.onChange(() => {
+            const areaId = MapModule.getCurrentAreaId();
+            if (areaId) MapModule.reloadArea(areaId);
+        });
 
         // Track annotation changes for badge updates
         Annotations.onChange(() => {
@@ -32,6 +39,11 @@ const App = (() => {
                 const fc = Annotations.getFeatureCollection();
                 Sidebar.updateAnnotationCount(areaId, fc.features.length);
             }
+        });
+
+        // Dissolve button
+        document.getElementById('btn-dissolve').addEventListener('click', () => {
+            Annotations.dissolveOverlapping();
         });
 
         // Load last viewed area or first area

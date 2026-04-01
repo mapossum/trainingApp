@@ -7,7 +7,10 @@ import rasterio
 
 import config
 
-DATASET_CONFIG_PATH = os.path.join(config.DATA_DIR, 'dataset_config.json')
+
+def _config_path():
+    """Return current dataset_config.json path (respects set_data_dir)."""
+    return os.path.join(config.DATA_DIR, 'dataset_config.json')
 
 # Defaults
 DEFAULT_STRETCH = "percentile"
@@ -93,7 +96,7 @@ def auto_detect(force=False):
 
     If config already exists and force=False, returns existing config.
     """
-    if os.path.exists(DATASET_CONFIG_PATH) and not force:
+    if os.path.exists(_config_path()) and not force:
         return load()
 
     tiff_path = _find_first_tiff()
@@ -185,15 +188,15 @@ def _default_config():
 
 def load():
     """Load dataset_config.json. Returns dict or None if not found."""
-    if not os.path.exists(DATASET_CONFIG_PATH):
+    if not os.path.exists(_config_path()):
         return None
-    with open(DATASET_CONFIG_PATH, 'r') as f:
+    with open(_config_path(), 'r') as f:
         return json.load(f)
 
 
 def save(cfg):
     """Save dataset config to disk."""
-    with open(DATASET_CONFIG_PATH, 'w') as f:
+    with open(_config_path(), 'w') as f:
         json.dump(cfg, f, indent=2)
 
 

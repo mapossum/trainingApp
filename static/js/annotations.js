@@ -151,5 +151,32 @@ const Annotations = (() => {
         });
     }
 
-    return { init, loadForArea, addFeature, getLayer, getFeatureCollection, triggerSave, onChange, refreshStyles };
+    async function dissolveOverlapping() {
+        if (!_currentAreaId) return;
+
+        // Save current state first
+        await _save();
+
+        try {
+            const resp = await fetch(`/api/annotations/${_currentAreaId}/dissolve`, {
+                method: 'POST',
+            });
+            const fc = await resp.json();
+
+            // Reload the layer with dissolved features
+            _layer.clearLayers();
+            if (fc.features && fc.features.length > 0) {
+                _layer.addData(fc);
+            }
+            if (_onChangeCallback) _onChangeCallback();
+
+            const before = getFeatureCollection().features.length;
+            App.toast(`Dissolved to ${fc.features.length} polygons`, 'success');
+        } catch (err) {
+            console.error('Dissolve failed:', err);
+            App.toast('Dissolve failed', 'error');
+        }
+    }
+
+    return { init, loadForArea, addFeature, getLayer, getFeatureCollection, triggerSave, onChange, refreshStyles, dissolveOverlapping };
 })();

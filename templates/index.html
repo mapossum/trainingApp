@@ -32,6 +32,7 @@
                 </div>
             </div>
             <div id="area-list"></div>
+            <div id="dataset-config-panel"></div>
             <div id="sidebar-footer">
                 <div id="complete-control">
                     <label><input type="checkbox" id="chk-complete" /> Mark Complete</label>
@@ -52,6 +53,7 @@
                     <button id="btn-sam" class="tool-btn" title="SAM2 click-to-segment (S)">SAM2</button>
                     <button id="btn-edit" class="tool-btn" title="Edit vertices (E)">Edit</button>
                     <button id="btn-delete" class="tool-btn" title="Delete polygon (X)">Delete</button>
+                    <button id="btn-dissolve" class="tool-btn" title="Dissolve overlapping polygons of same class">Dissolve</button>
                 </div>
             </div>
         </div>
@@ -59,6 +61,7 @@
     <div id="toast-container"></div>
 
     <!-- App JS modules -->
+    <script src="/static/js/dataset_config.js"></script>
     <script src="/static/js/classes.js"></script>
     <script src="/static/js/map.js"></script>
     <script src="/static/js/annotations.js"></script>

@@ -58,5 +58,24 @@ const MapModule = (() => {
         _map.fitBounds(bounds, { padding: [40, 40], maxZoom: 30 });
     }
 
-    return { init, getMap, getCurrentAreaId, loadArea };
+    async function reloadArea(areaId) {
+        // Reload the image overlay with a cache-busting param
+        if (_imageOverlay) {
+            _map.removeLayer(_imageOverlay);
+            _imageOverlay = null;
+        }
+
+        const resp = await fetch(`/api/tiff/${areaId}/bounds`);
+        const data = await resp.json();
+        const bounds = L.latLngBounds(data.bounds);
+
+        const cacheBust = Date.now();
+        _imageOverlay = L.imageOverlay(
+            `/api/tiff/${areaId}/image.png?t=${cacheBust}`, bounds, {
+            opacity: 1,
+            interactive: false,
+        }).addTo(_map);
+    }
+
+    return { init, getMap, getCurrentAreaId, loadArea, reloadArea };
 })();

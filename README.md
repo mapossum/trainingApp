@@ -10,6 +10,8 @@ Designed for remote sensing workflows: load GeoTIFFs in any projection, any band
 - **Any projection** -- TIFFs in any CRS are automatically reprojected for display. Annotations stored in EPSG:4326, exported in native CRS
 - **SAM2 click-to-segment** -- click foreground/background points and SAM2 generates a smooth polygon. Uses the same bands you see on screen
 - **Multiple drawing tools** -- vertex-by-vertex polygon, freehand drawing, and SAM2 AI-assisted modes
+- **Dissolve overlapping polygons** -- merge overlapping polygons of the same class into unified polygons with one click
+- **Multi-dataset support** -- run multiple instances on different ports with `--data` and `--port` CLI args
 - **Auto-save** -- annotations are saved automatically with 1-second debounce
 - **Class management** -- define annotation classes with colors in a simple JSON config
 - **Keyboard-driven workflow** -- navigate between areas, switch tools, and manage annotations without touching the mouse
@@ -56,12 +58,24 @@ Designed for remote sensing workflows: load GeoTIFFs in any projection, any band
    ```
    Open `http://127.0.0.1:5000` in your browser.
 
+   **Run with a specific data directory and port:**
+   ```bash
+   python -u app.py --data my_dataset --port 5000
+   ```
+
+   **Run multiple datasets simultaneously:**
+   ```bash
+   python -u app.py --data data_seagrass --port 5000
+   python -u app.py --data data_coral --port 5001
+   ```
+   Each instance loads its own SAM2 model (~1.2GB VRAM each).
+
 ## Data Setup
 
-Place your data in the `data/` directory:
+Place your data in a directory (default `data/`, or any path via `--data`):
 
 ```
-data/
+data/                       # or data_seagrass/, my_project/, etc.
   config.json               # Class definitions (required)
   trainingTiffs/            # Your GeoTIFF files (required)
   dataset_config.json       # Band/stretch config (auto-generated on first run)
@@ -69,6 +83,8 @@ data/
   app_state.json            # UI state (auto-created)
   trainingPolygons/         # Export output (auto-created)
 ```
+
+The TIFF subdirectory is auto-detected: `trainingTiffs/`, `trainingAreas/`, `tiffs/`, `images/`, or any subdirectory containing `.tif` files.
 
 ### Class Definitions (`config.json`)
 
@@ -141,6 +157,7 @@ See [DATASET_CONFIG.md](DATASET_CONFIG.md) for full details and example configur
 | S | SAM2 segment | Click foreground (left) and background (right) points |
 | E | Edit | Drag vertices to reshape existing polygons |
 | X | Delete | Click a polygon to remove it |
+| -- | Dissolve | Merge overlapping polygons of the same class (toolbar button) |
 
 ### SAM2 Workflow
 
@@ -167,8 +184,8 @@ Exports produce both GeoJSON and Shapefile formats in `data/trainingPolygons/`, 
 
 ```
 trainingApp/
-  app.py                 # Flask server + API routes + SAM2 prediction pipeline
-  config.py              # Path constants
+  app.py                 # Flask server + API routes + SAM2 prediction pipeline (--data/--port CLI args)
+  config.py              # Path constants + set_data_dir() for runtime switching
   dataset_config.py      # TIFF auto-detection and dataset configuration
   tiff_manager.py        # TIFF scanning, rendering, coordinate transforms
   annotation_store.py    # GeoJSON annotation persistence
@@ -179,7 +196,8 @@ trainingApp/
   static/js/
     app.js               # Main orchestrator, keyboard shortcuts
     map.js               # Leaflet map with Esri basemap
-    annotations.js       # GeoJSON annotation layer, auto-save
+    dataset_config.js    # Band assignment and stretch controls UI
+    annotations.js       # GeoJSON annotation layer, auto-save, dissolve
     drawing.js           # Polygon/freehand drawing via Leaflet-Geoman
     sam.js               # SAM2 click-to-segment UI
     sidebar.js           # Training area list, navigation, export
@@ -209,6 +227,7 @@ trainingApp/
 | GET | `/api/tiff/<id>/bounds` | TIFF bounds in EPSG:4326 |
 | GET | `/api/annotations/<id>` | Load annotations for an area |
 | PUT | `/api/annotations/<id>` | Save annotations for an area |
+| POST | `/api/annotations/<id>/dissolve` | Dissolve overlapping polygons of same class |
 | GET | `/api/sam2/status` | Check if SAM2 is available |
 | POST | `/api/sam2/predict` | Run SAM2 prediction from click points |
 | POST | `/api/export/<id>` | Export one area |

@@ -16,6 +16,18 @@ C:\Users\georg\AppData\Local\ESRI\conda\envs\arcgispro-py3-dl\python.exe -u app.
 ```
 Then open `http://127.0.0.1:5000` in a browser.
 
+### CLI Arguments
+```
+--data <path>   Data directory (default: data/)
+--port <int>    Server port (default: 5000)
+```
+
+Run multiple datasets simultaneously:
+```powershell
+python -u app.py --data data_seagrass --port 5000
+python -u app.py --data data --port 5001
+```
+
 **Important**: Always use `-u` flag for unbuffered output so logs appear in real time.
 
 **Important**: Kill zombie python.exe processes before restarting. Multiple SAM2 instances consume ~1.2GB each:
@@ -27,7 +39,7 @@ taskkill /F /IM python.exe
 
 ### Backend (Python/Flask)
 - `app.py` — Flask server, all API routes, SAM2 prediction pipeline
-- `config.py` — Path constants (DATA_DIR, TIFF_DIR, ANNOTATIONS_DIR, etc.)
+- `config.py` — Path constants and `set_data_dir()` for runtime data directory switching (supports `--data` CLI arg)
 - `dataset_config.py` — Auto-detects TIFF properties (bands, dtype, stretch), persists to `data/dataset_config.json`. See `DATASET_CONFIG.md` for full reference
 - `tiff_manager.py` — Scans trainingTiffs/, parses filenames, renders PNGs with configurable band selection and stretch, handles any CRS via pyproj
 - `annotation_store.py` — GeoJSON CRUD for annotations + app state persistence
@@ -38,22 +50,25 @@ taskkill /F /IM python.exe
 - `templates/index.html` — Single-page app with Leaflet + Leaflet-Geoman CDN
 - `static/js/app.js` — Main orchestrator, keyboard shortcuts, initialization
 - `static/js/map.js` — Leaflet map with Esri World Imagery basemap, image overlay
-- `static/js/annotations.js` — GeoJSON annotation layer with debounced auto-save (1s)
+- `static/js/dataset_config.js` — Band assignment dropdowns, stretch controls, applies changes via API
+- `static/js/annotations.js` — GeoJSON annotation layer with debounced auto-save (1s), dissolve overlapping polygons
 - `static/js/drawing.js` — Polygon draw, freehand draw, edit, delete via Leaflet-Geoman
 - `static/js/sam.js` — SAM2 click-to-segment with preview, accept/clear action bar
 - `static/js/sidebar.js` — Training area list, sorting, navigation, export buttons
 - `static/js/classes.js` — Class selector from config.json
 
 ### Data Structure
+Each dataset lives in its own directory (default `data/`, selectable via `--data`):
 ```
-data/
-  config.json               # Class definitions (e.g., 5 coral classes)
+data/                       # or data_seagrass/, data_coral/, etc.
+  config.json               # Class definitions (required)
   dataset_config.json       # Auto-generated: band mapping, stretch, nodata (see DATASET_CONFIG.md)
   annotations/              # Working GeoJSON per area (EPSG:4326)
   app_state.json            # Completion flags, last viewed, sort preference
   trainingPolygons/         # Export destination (native CRS)
   trainingTiffs/            # GeoTIFFs (any band count, any CRS, any bit depth)
-sam2_weights/               # SAM2 checkpoint (.pt file)
+                            # Also auto-detects: trainingAreas/, tiffs/, images/
+sam2_weights/               # SAM2 checkpoint (.pt file) — shared across datasets
 ```
 
 ### TIFF Format
@@ -82,6 +97,7 @@ sam2_weights/               # SAM2 checkpoint (.pt file)
 | PUT | `/api/annotations/<id>` | Save full FeatureCollection (auto-save) |
 | GET | `/api/sam2/status` | Check if SAM2 is loaded |
 | POST | `/api/sam2/predict` | Click points -> smooth polygon prediction |
+| POST | `/api/annotations/<id>/dissolve` | Dissolve overlapping polygons of same class |
 | POST | `/api/export/<id>` | Export one area (GeoJSON + Shapefile) |
 | POST | `/api/export/all` | Export all annotated areas |
 

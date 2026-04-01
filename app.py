@@ -175,6 +175,75 @@ def save_annotations(area_id):
     return jsonify({"status": "ok", "count": len(fc.get("features", []))})
 
 
+@app.route('/api/annotations/<area_id>/dissolve', methods=['POST'])
+def dissolve_annotations(area_id):
+    """Dissolve overlapping polygons of the same class into unified polygons."""
+    from shapely.geometry import shape, mapping
+    from shapely.ops import unary_union
+    from collections import defaultdict
+
+    fc = annotation_store.load_annotations(area_id)
+    features = fc.get("features", [])
+    if len(features) < 2:
+        return jsonify(fc)
+
+    # Group by class_value
+    groups = defaultdict(list)
+    for f in features:
+        cv = f.get("properties", {}).get("class_value")
+        groups[cv].append(f)
+
+    new_features = []
+    for cv, group_features in groups.items():
+        if len(group_features) < 2:
+            new_features.extend(group_features)
+            continue
+
+        # Build shapely geometries
+        polys = []
+        for f in group_features:
+            try:
+                polys.append(shape(f["geometry"]))
+            except Exception:
+                continue
+
+        # Union all polygons in this class
+        merged = unary_union(polys)
+        if not merged.is_valid:
+            merged = merged.buffer(0)
+
+        # Get properties template from first feature
+        props = dict(group_features[0].get("properties", {}))
+
+        # Split MultiPolygon into individual features
+        if merged.geom_type == 'MultiPolygon':
+            for geom in merged.geoms:
+                new_features.append({
+                    "type": "Feature",
+                    "geometry": mapping(geom),
+                    "properties": dict(props),
+                })
+        elif merged.geom_type == 'Polygon':
+            new_features.append({
+                "type": "Feature",
+                "geometry": mapping(merged),
+                "properties": dict(props),
+            })
+
+    result = {
+        "type": "FeatureCollection",
+        "properties": {"area_id": area_id},
+        "features": new_features,
+    }
+
+    annotation_store.save_annotations(area_id, result)
+    before = len(features)
+    after = len(new_features)
+    logger.info(f"Dissolve {area_id}: {before} -> {after} features")
+
+    return jsonify(result)
+
+
 @app.route('/api/sam2/status')
 def sam2_status():
     return jsonify({"available": _sam2_ready})
@@ -321,9 +390,23 @@ def export_all():
     return jsonify({"status": "ok", "exported": exported, "count": len(exported)})
 
 
-initialize()
-
 if __name__ == '__main__':
-    print("Starting server...")
-    from werkzeug.serving import run_simple
-    run_simple('0.0.0.0', 5000, app, use_reloader=False, use_debugger=False, threaded=True)
+    import argparse
+    parser = argparse.ArgumentParser(description='Training Data Annotation App')
+    parser.add_argument('--data', type=str, default=None,
+                        help='Path to data directory (default: data/)')
+    parser.add_argument('--port', type=int, default=5000,
+                        help='Server port (default: 5000)')
+    args = parser.parse_args()
+
+    if args.data:
+        config.set_data_dir(args.data)
+        logger.info(f"Using data directory: {config.DATA_DIR}")
+        logger.info(f"TIFF directory: {config.TIFF_DIR}")
+
+    initialize()
+    print(f"Starting server on port {args.port}...")
+    app.run(host='0.0.0.0', port=args.port, debug=False, use_reloader=False, threaded=True)
+else:
+    # When imported (not run directly), initialize with defaults
+    initialize()
