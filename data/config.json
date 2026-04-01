@@ -1,0 +1,27 @@
+[
+  {
+    "name": "palmata",
+    "value": 1,
+    "color": "orange"
+  },
+  {
+    "name": "palmata bleached",
+    "value": 11,
+    "color": "#ffebcc"
+  },
+  {
+    "name": "mounding",
+    "value": 2,
+    "color": "green"
+  },
+  {
+    "name": "other",
+    "value": 3,
+    "color": "red"
+  },
+  {
+    "name": "other bleached",
+    "value": 33,
+    "color": "#ffe6e6"
+  }
+]

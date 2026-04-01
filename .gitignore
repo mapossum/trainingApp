@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+
+# Data (large files — user-specific, keep .gitkeep placeholders)
+data/trainingTiffs/*
+!data/trainingTiffs/.gitkeep
+data/trainingPolygons/*
+!data/trainingPolygons/.gitkeep
+data/annotations/*
+!data/annotations/.gitkeep
+data/app_state.json
+
+# SAM2 model weights (large, ~150MB+)
+sam2_weights/*.pt
+
+# Test/diagnostic artifacts
+test_warp.py
+test_warped*.png
+diagnose_bounds.py
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Claude Code internal
+.claude/

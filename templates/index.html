@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Training Data Annotation</title>
+
+    <!-- Leaflet -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <!-- Leaflet-Geoman (replaces Leaflet.Draw, better maintained) -->
+    <link rel="stylesheet" href="https://unpkg.com/@geoman-io/leaflet-geoman-free@2.16.0/dist/leaflet-geoman.css" />
+    <script src="https://unpkg.com/@geoman-io/leaflet-geoman-free@2.16.0/dist/leaflet-geoman.min.js"></script>
+
+    <!-- App CSS -->
+    <link rel="stylesheet" href="/static/css/app.css" />
+</head>
+<body>
+    <div id="app">
+        <div id="sidebar">
+            <div id="sidebar-header">
+                <h2>Training Areas</h2>
+                <div id="sort-controls">
+                    <label>Sort by:</label>
+                    <button id="sort-name" class="sort-btn active">Name</button>
+                    <button id="sort-oid" class="sort-btn">OID</button>
+                </div>
+                <div id="nav-controls">
+                    <button id="btn-prev" title="Previous (Left Arrow)">&laquo; Prev</button>
+                    <button id="btn-next" title="Next (Right Arrow)">Next &raquo;</button>
+                </div>
+            </div>
+            <div id="area-list"></div>
+            <div id="sidebar-footer">
+                <div id="complete-control">
+                    <label><input type="checkbox" id="chk-complete" /> Mark Complete</label>
+                </div>
+                <div id="export-controls">
+                    <button id="btn-export">Export Current</button>
+                    <button id="btn-export-all">Export All</button>
+                </div>
+            </div>
+        </div>
+        <div id="map-container">
+            <div id="map"></div>
+            <div id="toolbar">
+                <div id="class-selector"></div>
+                <div id="tool-buttons">
+                    <button id="btn-draw" class="tool-btn" title="Draw polygon (D)">Draw</button>
+                    <button id="btn-freehand" class="tool-btn" title="Freehand polygon (F)">Freehand</button>
+                    <button id="btn-sam" class="tool-btn" title="SAM2 click-to-segment (S)">SAM2</button>
+                    <button id="btn-edit" class="tool-btn" title="Edit vertices (E)">Edit</button>
+                    <button id="btn-delete" class="tool-btn" title="Delete polygon (X)">Delete</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="toast-container"></div>
+
+    <!-- App JS modules -->
+    <script src="/static/js/classes.js"></script>
+    <script src="/static/js/map.js"></script>
+    <script src="/static/js/annotations.js"></script>
+    <script src="/static/js/drawing.js"></script>
+    <script src="/static/js/sam.js"></script>
+    <script src="/static/js/sidebar.js"></script>
+    <script src="/static/js/app.js"></script>
+</body>
+</html>
