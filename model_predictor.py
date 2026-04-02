@@ -55,6 +55,8 @@ def _parse_emd(emd_path):
         'extract_bands': emd.get('ExtractBands', [0, 1, 2]),
         'format': emd.get('ModelFormat', 'NCHW'),
         'is_imagenet_norm': emd.get('IsImageNetNormalization', False),
+        'is_multispectral': emd.get('IsMultispectral', False),
+        'normalization_stats': emd.get('NormalizationStats', None),
         'classes': classes,
         'num_classes': num_classes,
     }
@@ -210,6 +212,8 @@ def predict(model_name, tiff_path, transform, native_crs, horizontal_crs, pixel_
     tile_size = model_cfg['tile_size']
     extract_bands = model_cfg['extract_bands']
     is_imagenet = model_cfg['is_imagenet_norm']
+    is_multispectral = model_cfg['is_multispectral']
+    norm_stats = model_cfg['normalization_stats']
     num_classes = model_cfg['num_classes']
     classes = model_cfg['classes']
 
@@ -228,10 +232,21 @@ def predict(model_name, tiff_path, transform, native_crs, horizontal_crs, pixel_
         tiles = _generate_tiles(H, W, tile_size, overlap)
         logger.info(f"Generated {len(tiles)} tiles ({tile_size}x{tile_size}, overlap={overlap})")
 
-        # ImageNet normalization constants
-        if is_imagenet:
+        # Normalization setup
+        if is_multispectral and norm_stats:
+            # Use per-band stats from .emd (scaled to 0-1 range)
+            band_min = np.array(norm_stats['band_min_values'], dtype=np.float32)
+            band_max = np.array(norm_stats['band_max_values'], dtype=np.float32)
+            band_range = np.maximum(band_max - band_min, 1.0)
+            scaled_mean = np.array(norm_stats['scaled_mean_values'], dtype=np.float32)
+            scaled_std = np.array(norm_stats['scaled_std_values'], dtype=np.float32)
+            use_custom_norm = True
+        elif is_imagenet:
             mean = np.array([0.485, 0.456, 0.406], dtype=np.float32)
             std = np.array([0.229, 0.224, 0.225], dtype=np.float32)
+            use_custom_norm = False
+        else:
+            use_custom_norm = False
 
         # Run inference on all tiles, accumulate logits
         prediction_sum = np.zeros((num_classes, H, W), dtype=np.float32)
@@ -255,10 +270,17 @@ def predict(model_name, tiff_path, transform, native_crs, horizontal_crs, pixel_
                             padded[:, col] = padded[:, tw - 1]
                     tile = padded
 
-                # Normalize to float32 [0, 1]
-                tile_f = tile.astype(np.float32) / 255.0
-                if is_imagenet:
+                # Normalize to float32
+                tile_f = tile.astype(np.float32)
+                if use_custom_norm:
+                    # Scale to 0-1 using band min/max, then normalize with scaled stats
+                    tile_f = (tile_f - band_min) / band_range
+                    tile_f = (tile_f - scaled_mean) / scaled_std
+                elif is_imagenet:
+                    tile_f = tile_f / 255.0
                     tile_f = (tile_f - mean) / std
+                else:
+                    tile_f = tile_f / 255.0
 
                 # Convert to NCHW tensor
                 tensor = torch.from_numpy(tile_f.transpose(2, 0, 1)).unsqueeze(0).to(device)

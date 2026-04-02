@@ -83,6 +83,7 @@ const SAM = (() => {
         _clearMarkers();
         _clearPreview();
 
+        Annotations.setInteractive(false);
         document.getElementById('btn-sam').classList.add('sam-active');
         _map.getContainer().style.cursor = 'crosshair';
 
@@ -99,6 +100,7 @@ const SAM = (() => {
         _clearPreview();
         _showActionBar(false);
 
+        Annotations.setInteractive(true);
         document.getElementById('btn-sam').classList.remove('sam-active');
         _map.getContainer().style.cursor = '';
 

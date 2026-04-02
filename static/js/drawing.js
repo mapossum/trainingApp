@@ -73,6 +73,7 @@ const Drawing = (() => {
     }
 
     function _activateDraw() {
+        Annotations.setInteractive(false);
         const cls = Classes.getActive();
         _map.pm.enableDraw('Polygon', {
             snappable: false,
@@ -92,6 +93,7 @@ const Drawing = (() => {
         _map.pm.disableDraw();
         _active = false;
         document.getElementById('btn-draw').classList.remove('active');
+        Annotations.setInteractive(true);
     }
 
     // --- Freehand polygon draw ---
@@ -112,6 +114,7 @@ const Drawing = (() => {
     }
 
     function _activateFreehand() {
+        Annotations.setInteractive(false);
         _freehandActive = true;
         _freehandDrawing = false;
         _freehandPoints = [];
@@ -130,6 +133,7 @@ const Drawing = (() => {
         _map.off('click', _freehandClick);
         _map.off('mousemove', _freehandMouseMove);
         _map.dragging.enable();
+        Annotations.setInteractive(true);
     }
 
     function _freehandClick(e) {

@@ -140,6 +140,8 @@ sam2_weights/               # SAM2 checkpoint (.pt file) — shared across datas
 - **Undo**: 5-level snapshot stack in annotations.js. Captures FeatureCollection before each mutation
 - **Select mode**: Click to toggle selection on individual polygons. Action bar for bulk class change or delete
 - **Smart navigation**: Switching areas only re-centers the map if the new image is off-screen; otherwise the current view is preserved. Fit-to-image button (Leaflet control) for manual zoom-to-extent
+- **Draw-through existing polygons**: Draw, Freehand, and SAM2 modes call `Annotations.setInteractive(false)` on activate (pointer-events:none on all annotation layers) so clicks pass through to the map. Restored on deactivate
+- **Multispectral model normalization**: `model_predictor.py` checks `IsMultispectral` + `NormalizationStats` in .emd. Uses per-band min/max/mean/std from the .emd instead of hardcoded ImageNet 3-band values
 
 ## Keyboard Shortcuts
 - **Left/Right arrows**: Previous/next training area
@@ -172,6 +174,7 @@ All available in the arcgispro-py3-dl conda env:
 - **Module globals**: Flask's `app.run()` can fork processes. Module-level `initialize()` ensures globals are set in the serving process
 - **Image overlay alignment**: TIFF pixels are in UTM grid but Leaflet displays as a lat/lng rectangle. A UTM rectangle becomes a trapezoid in 4326, causing ~9px misalignment. Fixed by warping the image to EPSG:4326 with `rasterio.warp.reproject` before serving, and computing bounds from the warped transform via `calculate_default_transform`. Both the PNG and bounds now use the same 4326 pixel grid
 - **Stale processes**: When restarting, ensure ALL old python.exe processes are killed. Old processes on the same port serve stale code. Use `netstat -ano | grep :5000` to find PIDs if `taskkill /F /IM python.exe` doesn't catch them all
+- **Corrupt app_state.json**: If `app_state.json` is empty (e.g., after swapping dataset contents), `/api/training-areas` will 500 with a JSONDecodeError. Fix: delete the file and restart — the app creates a fresh one
 
 ## Authentication
 Optional HTTP Basic Auth, configurable per dataset. Place an `auth.json` in the dataset's data directory:

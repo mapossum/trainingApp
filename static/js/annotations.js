@@ -159,6 +159,16 @@ const Annotations = (() => {
         _onChangeCallback = callback;
     }
 
+    function setInteractive(interactive) {
+        _layer.eachLayer(layer => {
+            if (interactive) {
+                layer.getElement && layer.getElement() && (layer.getElement().style.pointerEvents = '');
+            } else {
+                layer.getElement && layer.getElement() && (layer.getElement().style.pointerEvents = 'none');
+            }
+        });
+    }
+
     function refreshStyles() {
         _layer.eachLayer(layer => {
             if (layer.feature) {
@@ -261,7 +271,7 @@ const Annotations = (() => {
 
     return {
         init, loadForArea, addFeature, removeLayer, getLayer, getFeatureCollection,
-        triggerSave, onChange, refreshStyles, dissolveOverlapping,
+        triggerSave, onChange, refreshStyles, setInteractive, dissolveOverlapping,
         eraseWithPolygon, pushUndo, undo, getUndoCount,
     };
 })();
