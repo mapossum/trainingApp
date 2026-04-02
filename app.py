@@ -1,7 +1,8 @@
 import io
 import json
+import os
 import numpy as np
-from flask import Flask, render_template, jsonify, request, send_file
+from flask import Flask, render_template, jsonify, request, send_file, Response
 
 import config
 import annotation_store
@@ -48,6 +49,39 @@ def initialize():
 
     logger.info("Scanning for prediction models...")
     model_predictor.init(config.MODELS_DIR)
+
+    # Configure basic auth if auth.json exists in data dir
+    _setup_auth()
+
+
+def _setup_auth():
+    """Load auth.json from data dir and enable HTTP Basic Auth if present."""
+    if not os.path.isfile(config.AUTH_PATH):
+        logger.info("No auth.json found — authentication disabled")
+        return
+
+    try:
+        with open(config.AUTH_PATH, 'r') as f:
+            auth_cfg = json.load(f)
+        username = auth_cfg.get('username')
+        password = auth_cfg.get('password')
+        if not username or not password:
+            logger.warning("auth.json missing username or password — authentication disabled")
+            return
+    except Exception as e:
+        logger.warning(f"Failed to read auth.json: {e} — authentication disabled")
+        return
+
+    logger.info(f"Basic authentication enabled (user: {username})")
+
+    @app.before_request
+    def require_auth():
+        auth = request.authorization
+        if not auth or auth.username != username or auth.password != password:
+            return Response(
+                'Authentication required', 401,
+                {'WWW-Authenticate': 'Basic realm="Training App"'}
+            )
 
 
 @app.route('/')

@@ -127,6 +127,10 @@ const App = (() => {
             case 'Q':
                 Select.toggle();
                 break;
+            case 'w':
+            case 'W':
+                MapModule.fitToImage();
+                break;
             case 'm':
             case 'M':
                 if (!Drawing.isActive() && !SAM.isActive()) {

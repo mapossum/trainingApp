@@ -73,6 +73,7 @@ data/                       # or data_seagrass/, data_coral/, etc.
   trainingTiffs/            # GeoTIFFs (any band count, any CRS, any bit depth)
                             # Also auto-detects: trainingAreas/, tiffs/, images/
   models/                   # Optional: ESRI DL models (.pth + .emd pairs)
+  auth.json                 # Optional: {"username":"...","password":"..."} for HTTP Basic Auth
 sam2_weights/               # SAM2 checkpoint (.pt file) — shared across datasets
 ```
 
@@ -138,6 +139,7 @@ sam2_weights/               # SAM2 checkpoint (.pt file) — shared across datas
 - **Erase mode**: Pseudo-class in class selector. When active, drawn/freehand/SAM2 polygons clip existing annotations via Shapely `difference()` on the backend
 - **Undo**: 5-level snapshot stack in annotations.js. Captures FeatureCollection before each mutation
 - **Select mode**: Click to toggle selection on individual polygons. Action bar for bulk class change or delete
+- **Smart navigation**: Switching areas only re-centers the map if the new image is off-screen; otherwise the current view is preserved. Fit-to-image button (Leaflet control) for manual zoom-to-extent
 
 ## Keyboard Shortcuts
 - **Left/Right arrows**: Previous/next training area
@@ -147,6 +149,7 @@ sam2_weights/               # SAM2 checkpoint (.pt file) — shared across datas
 - **Q**: Select mode (click polygons to select, then bulk edit)
 - **E**: Edit vertices
 - **X**: Delete mode
+- **W**: Fit image to window (zoom to extent)
 - **M**: Run model prediction on current area
 - **Enter**: Accept SAM2 prediction / Exit edit mode (saves edits)
 - **Escape**: Cancel current tool / SAM2 / Select mode
@@ -169,3 +172,34 @@ All available in the arcgispro-py3-dl conda env:
 - **Module globals**: Flask's `app.run()` can fork processes. Module-level `initialize()` ensures globals are set in the serving process
 - **Image overlay alignment**: TIFF pixels are in UTM grid but Leaflet displays as a lat/lng rectangle. A UTM rectangle becomes a trapezoid in 4326, causing ~9px misalignment. Fixed by warping the image to EPSG:4326 with `rasterio.warp.reproject` before serving, and computing bounds from the warped transform via `calculate_default_transform`. Both the PNG and bounds now use the same 4326 pixel grid
 - **Stale processes**: When restarting, ensure ALL old python.exe processes are killed. Old processes on the same port serve stale code. Use `netstat -ano | grep :5000` to find PIDs if `taskkill /F /IM python.exe` doesn't catch them all
+
+## Authentication
+Optional HTTP Basic Auth, configurable per dataset. Place an `auth.json` in the dataset's data directory:
+```json
+{
+  "username": "annotator",
+  "password": "your-password-here"
+}
+```
+- If `auth.json` exists and has valid username/password, all routes require HTTP Basic Auth
+- If `auth.json` is missing, the app runs without authentication (local-only use)
+- `auth.json` is in `.gitignore` — never commit credentials
+- The browser will prompt for credentials on first access and cache them for the session
+
+## Remote Access (Cloudflare Tunnel)
+To expose the app to offsite collaborators without VPN or firewall changes:
+
+### Setup
+1. Install cloudflared: `winget install cloudflare.cloudflared`
+2. Add `auth.json` to the dataset's data directory (see Authentication above)
+3. Start the app: `python -u app.py --data data_conch --port 5003`
+4. Start the tunnel: `cloudflared tunnel --url http://localhost:5003`
+5. Share the generated `*.trycloudflare.com` URL with collaborators
+
+### Notes
+- Quick tunnels (no Cloudflare account needed) generate a random URL each time
+- For a stable URL, create a named tunnel: `cloudflared tunnel create <name>` then configure DNS
+- Each dataset/port needs its own tunnel if exposing multiple datasets
+- Tunnels handle HTTPS automatically — collaborators access via `https://`
+- Basic auth credentials are sent over HTTPS so they're encrypted in transit
+- To stop: Ctrl+C the cloudflared process

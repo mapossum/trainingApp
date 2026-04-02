@@ -19,6 +19,9 @@ data/dataset_config.json
 # Additional data directories (same structure)
 data_*/
 
+# Auth credentials (per-dataset, never commit)
+auth.json
+
 # SAM2 model weights (large, ~150MB+)
 sam2_weights/*.pt
 

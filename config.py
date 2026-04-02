@@ -12,12 +12,13 @@ DATASET_CONFIG_PATH = os.path.join(DATA_DIR, 'dataset_config.json')
 STATE_PATH = os.path.join(DATA_DIR, 'app_state.json')
 SAM2_WEIGHTS_DIR = os.path.join(BASE_DIR, 'sam2_weights')
 MODELS_DIR = os.path.join(DATA_DIR, 'models')
+AUTH_PATH = os.path.join(DATA_DIR, 'auth.json')
 
 
 def set_data_dir(data_dir):
     """Reconfigure all paths based on a new data directory."""
     global DATA_DIR, TIFF_DIR, ANNOTATIONS_DIR, EXPORT_DIR
-    global CONFIG_PATH, DATASET_CONFIG_PATH, STATE_PATH, MODELS_DIR
+    global CONFIG_PATH, DATASET_CONFIG_PATH, STATE_PATH, MODELS_DIR, AUTH_PATH
 
     DATA_DIR = os.path.abspath(data_dir)
 
@@ -42,6 +43,7 @@ def set_data_dir(data_dir):
     DATASET_CONFIG_PATH = os.path.join(DATA_DIR, 'dataset_config.json')
     STATE_PATH = os.path.join(DATA_DIR, 'app_state.json')
     MODELS_DIR = os.path.join(DATA_DIR, 'models')
+    AUTH_PATH = os.path.join(DATA_DIR, 'auth.json')
 
     # Ensure directories exist
     os.makedirs(ANNOTATIONS_DIR, exist_ok=True)
