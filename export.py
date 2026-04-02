@@ -36,6 +36,15 @@ def export_area(area_id, tiff_manager):
     target_crs = area['horizontal_crs']
     gdf = gdf.to_crs(target_crs.to_epsg())
 
+    # Rename fields to ArcGIS deep learning preferred names (no underscores)
+    rename = {}
+    if 'class_name' in gdf.columns:
+        rename['class_name'] = 'classname'
+    if 'class_value' in gdf.columns:
+        rename['class_value'] = 'classvalue'
+    if rename:
+        gdf = gdf.rename(columns=rename)
+
     # Write GeoJSON
     geojson_path = os.path.join(config.EXPORT_DIR, f"{area_id}.geojson")
     gdf.to_file(geojson_path, driver="GeoJSON")

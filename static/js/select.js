@@ -112,7 +112,7 @@ const Select = (() => {
                 weight: 2,
                 opacity: 0.9,
                 fillColor: color,
-                fillOpacity: 0.3,
+                fillOpacity: Annotations.getFillOpacity(),
                 dashArray: null,
             });
         }

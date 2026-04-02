@@ -5,6 +5,9 @@ const ModelPredict = (() => {
     let _models = [];
     let _selectedModel = null;
     let _loading = false;
+    let _previewLayer = null;
+    let _previewFeatures = [];
+    let _actionBar = null;
 
     async function init(map) {
         _map = map;
@@ -35,6 +38,8 @@ const ModelPredict = (() => {
         if (_models.length > 1) {
             _buildModelSelector();
         }
+
+        _createActionBar();
     }
 
     function _buildModelSelector() {
@@ -58,8 +63,64 @@ const ModelPredict = (() => {
         btn.parentNode.insertBefore(select, btn.nextSibling);
     }
 
+    function _createActionBar() {
+        _actionBar = document.createElement('div');
+        _actionBar.id = 'predict-action-bar';
+        _actionBar.style.display = 'none';
+        _actionBar.innerHTML = `
+            <div class="predict-action-label">Model Preview: <span id="predict-count">0</span> polygons</div>
+            <button id="predict-accept" class="predict-action-btn predict-accept-btn" title="Accept and add to annotations (Enter)">Accept</button>
+            <button id="predict-discard" class="predict-action-btn predict-discard-btn" title="Discard prediction">Discard</button>
+        `;
+        document.getElementById('map-container').appendChild(_actionBar);
+
+        document.getElementById('predict-accept').addEventListener('click', (e) => {
+            e.stopPropagation();
+            _accept();
+        });
+        document.getElementById('predict-discard').addEventListener('click', (e) => {
+            e.stopPropagation();
+            _discard();
+        });
+    }
+
+    function _showActionBar(show) {
+        if (_actionBar) {
+            _actionBar.style.display = show ? 'flex' : 'none';
+        }
+    }
+
+    function _accept() {
+        if (!_previewLayer || _previewFeatures.length === 0) return;
+        Annotations.pushUndo();
+        for (const feature of _previewFeatures) {
+            Annotations.addFeature(feature);
+        }
+        App.toast(`Added ${_previewFeatures.length} polygons`, 'success');
+        _clearPreview();
+    }
+
+    function _discard() {
+        _clearPreview();
+        App.toast('Prediction discarded', 'info');
+    }
+
+    function _clearPreview() {
+        if (_previewLayer) {
+            _map.removeLayer(_previewLayer);
+            _previewLayer = null;
+        }
+        _previewFeatures = [];
+        _showActionBar(false);
+        const btn = document.getElementById('btn-model-predict');
+        if (btn) btn.classList.remove('active');
+    }
+
     async function run() {
         if (!_available || _loading) return;
+
+        // Discard any existing preview first
+        if (_previewLayer) _discard();
 
         const areaId = MapModule.getCurrentAreaId();
         if (!areaId) {
@@ -90,31 +151,53 @@ const ModelPredict = (() => {
 
             if (data.error) {
                 App.toast(data.error, 'error');
+                btn.classList.remove('active');
                 return;
             }
 
             if (data.features && data.features.length > 0) {
-                for (const feature of data.features) {
-                    // Map class value to app class if available
+                _previewFeatures = data.features.map(feature => {
                     const cls = Classes.getByValue(feature.properties.class_value);
-                    if (cls) {
-                        feature.properties.class_name = cls.name;
-                    }
+                    if (cls) feature.properties.class_name = cls.name;
                     feature.properties.id = Math.random().toString(36).substring(2, 10);
-                    Annotations.addFeature(feature);
-                }
-                App.toast(`Added ${data.features.length} polygons from model`, 'success');
+                    return feature;
+                });
+
+                // Show as preview layer with dashed style
+                _previewLayer = L.geoJSON(_previewFeatures, {
+                    style: feature => {
+                        const cls = Classes.getByValue(feature.properties.class_value);
+                        const color = cls ? cls.color : '#f39c12';
+                        return {
+                            color: color,
+                            weight: 2,
+                            dashArray: '6 4',
+                            fillColor: color,
+                            fillOpacity: 0.15,
+                            opacity: 0.8,
+                        };
+                    },
+                }).addTo(_map);
+
+                document.getElementById('predict-count').textContent = _previewFeatures.length;
+                _showActionBar(true);
+                App.toast(`${_previewFeatures.length} polygons ready — accept or discard`, 'info');
             } else {
                 App.toast('Model found no features in this area', 'info');
+                btn.classList.remove('active');
             }
         } catch (err) {
             console.error('Model prediction failed:', err);
             App.toast('Model prediction failed: ' + err.message, 'error');
+            btn.classList.remove('active');
         } finally {
             _loading = false;
-            btn.classList.remove('active');
             _showLoading(false);
         }
+    }
+
+    function clearPreviewOnAreaChange() {
+        if (_previewLayer) _clearPreview();
     }
 
     function _showLoading(show) {
@@ -131,5 +214,5 @@ const ModelPredict = (() => {
 
     function isAvailable() { return _available; }
 
-    return { init, run, isAvailable };
+    return { init, run, isAvailable, clearPreviewOnAreaChange };
 })();

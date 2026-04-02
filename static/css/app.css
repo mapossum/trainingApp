@@ -389,20 +389,17 @@ body {
     flex: 1;
 }
 
-/* Toolbar */
+/* Toolbar — bottom ribbon */
 #toolbar {
-    position: absolute;
-    bottom: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: 1000;
     display: flex;
-    gap: 12px;
-    background: rgba(26, 26, 46, 0.92);
+    flex-wrap: wrap;
+    gap: 8px;
+    background: #1a1a2e;
     padding: 8px 16px;
-    border-radius: 8px;
-    box-shadow: 0 2px 12px rgba(0,0,0,0.4);
     align-items: center;
+    justify-content: center;
+    border-top: 2px solid #16213e;
+    flex-shrink: 0;
 }
 
 #class-selector {
@@ -433,9 +430,10 @@ body {
 
 #tool-buttons {
     display: flex;
+    flex-wrap: wrap;
     gap: 4px;
     border-left: 1px solid #444;
-    padding-left: 12px;
+    padding-left: 8px;
 }
 
 .tool-btn {
@@ -630,6 +628,102 @@ body {
     background: #2980b9;
     color: white;
     border-color: #2980b9;
+}
+
+/* Model predict action bar */
+#predict-action-bar {
+    position: absolute;
+    top: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(39, 174, 96, 0.92);
+    padding: 8px 16px;
+    border-radius: 8px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.4);
+}
+
+.predict-action-label {
+    color: white;
+    font-size: 13px;
+    font-weight: bold;
+    margin-right: 4px;
+}
+
+.predict-action-btn {
+    padding: 5px 14px;
+    font-size: 12px;
+    font-weight: bold;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    color: white;
+}
+
+.predict-accept-btn {
+    background: #1a5276;
+}
+
+.predict-accept-btn:hover {
+    background: #1f6f96;
+}
+
+.predict-discard-btn {
+    background: #e74c3c;
+}
+
+.predict-discard-btn:hover {
+    background: #c0392b;
+}
+
+/* Model selector dropdown in toolbar */
+#model-selector {
+    padding: 4px 6px;
+    font-size: 11px;
+    background: #16213e;
+    color: #ccc;
+    border: 1px solid #444;
+    border-radius: 4px;
+    max-width: 140px;
+    text-overflow: ellipsis;
+}
+
+/* Responsive toolbar — shrink on narrower screens */
+@media (max-width: 1300px) {
+    .class-btn {
+        padding: 4px 8px;
+        font-size: 11px;
+    }
+    .tool-btn {
+        padding: 4px 8px;
+        font-size: 11px;
+    }
+    #toolbar {
+        gap: 6px;
+        padding: 6px 12px;
+    }
+}
+
+@media (max-width: 1050px) {
+    .class-btn {
+        padding: 4px 6px;
+        font-size: 10px;
+    }
+    .tool-btn {
+        padding: 4px 6px;
+        font-size: 10px;
+    }
+    #model-selector {
+        max-width: 100px;
+        font-size: 10px;
+    }
+    #toolbar {
+        gap: 4px;
+        padding: 5px 8px;
+    }
 }
 
 /* Toast notifications */

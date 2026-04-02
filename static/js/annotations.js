@@ -7,6 +7,7 @@ const Annotations = (() => {
     let _onChangeCallback = null;
     let _undoStack = [];
     const UNDO_MAX = 5;
+    let _fillOpacity = 0.3;
 
     function init(map) {
         _map = map;
@@ -24,7 +25,7 @@ const Annotations = (() => {
             weight: 2,
             opacity: 0.9,
             fillColor: color,
-            fillOpacity: 0.3,
+            fillOpacity: _fillOpacity,
         };
     }
 
@@ -159,6 +160,19 @@ const Annotations = (() => {
         _onChangeCallback = callback;
     }
 
+    function setFillOpacity(opacity) {
+        _fillOpacity = opacity;
+        _layer.eachLayer(layer => {
+            if (layer.feature) {
+                layer.setStyle({ fillOpacity: opacity });
+            }
+        });
+    }
+
+    function getFillOpacity() {
+        return _fillOpacity;
+    }
+
     function setInteractive(interactive) {
         _layer.eachLayer(layer => {
             if (interactive) {
@@ -271,7 +285,7 @@ const Annotations = (() => {
 
     return {
         init, loadForArea, addFeature, removeLayer, getLayer, getFeatureCollection,
-        triggerSave, onChange, refreshStyles, setInteractive, dissolveOverlapping,
-        eraseWithPolygon, pushUndo, undo, getUndoCount,
+        triggerSave, onChange, refreshStyles, setFillOpacity, getFillOpacity,
+        setInteractive, dissolveOverlapping, eraseWithPolygon, pushUndo, undo, getUndoCount,
     };
 })();

@@ -237,16 +237,27 @@ def dissolve_annotations(area_id):
             new_features.extend(group_features)
             continue
 
-        # Build shapely geometries
+        # Build shapely geometries — buffer(0) repairs self-intersections
+        # that cause TopologyException in unary_union even on "valid" geometries
         polys = []
         for f in group_features:
             try:
-                polys.append(shape(f["geometry"]))
+                poly = shape(f["geometry"]).buffer(0)
+                if not poly.is_empty:
+                    polys.append(poly)
             except Exception:
                 continue
 
+        if not polys:
+            continue
+
         # Union all polygons in this class
-        merged = unary_union(polys)
+        try:
+            merged = unary_union(polys)
+        except Exception:
+            # If union still fails, keep originals unchanged
+            new_features.extend(group_features)
+            continue
         if not merged.is_valid:
             merged = merged.buffer(0)
 

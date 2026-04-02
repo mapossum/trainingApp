@@ -9,13 +9,14 @@ Designed for remote sensing workflows: load GeoTIFFs in any projection, any band
 - **Multi-band TIFF support** -- works with RGB, RGBNIR, 8-band (Planet SuperDove), or any band count. Configurable band-to-RGB mapping and dynamic stretch (percentile, min/max, standard deviation)
 - **Any projection** -- TIFFs in any CRS are automatically reprojected for display. Annotations stored in EPSG:4326, exported in native CRS
 - **SAM2 click-to-segment** -- click foreground/background points and SAM2 generates a smooth polygon
-- **Model prediction** -- run ESRI-trained UNet models to pre-generate annotation polygons. Supports multiple models per dataset with automatic normalization from `.emd` metadata. Drop `.pth` + `.emd` pairs in `models/` and restart
+- **Model prediction** -- run ESRI-trained UNet models to pre-generate annotation polygons shown as a dashed preview. Accept or discard before committing to annotations. Supports multiple models per dataset with automatic normalization from `.emd` metadata. Drop `.pth` + `.emd` pairs in `models/` and restart
 - **Multiple drawing tools** -- vertex-by-vertex polygon, freehand, SAM2, edit, and delete modes. All tools allow drawing inside existing polygons (clicks pass through to the map)
 - **Select mode** -- click polygons to select, then bulk delete or reassign class
 - **Erase mode** -- draw/freehand/SAM2 polygons clip existing annotations instead of adding new ones. Works inside existing polygons
 - **Undo** -- 5-level snapshot history (Ctrl+Z)
 - **Dissolve overlapping polygons** -- merge overlapping polygons of the same class into unified polygons
 - **Smart navigation** -- switching areas preserves the current map view; only re-centers when the new image is off-screen. Fit-to-image button (W) for manual zoom-to-extent
+- **Fill opacity toggle** -- press T or the Fill button to hide polygon fills and see just outlines, useful for checking polygon accuracy against the image below
 - **Multi-dataset support** -- run multiple instances on different ports with `--data` and `--port` CLI args
 - **Auto-save** -- annotations are saved automatically with 1-second debounce
 - **Export** -- export current, complete, or all areas as GeoJSON + Shapefile with CRS reprojection
@@ -161,6 +162,7 @@ The auto-generated `data/dataset_config.json` controls how bands are mapped to R
 |-----|--------|
 | Left/Right arrows | Previous/next training area |
 | W | Fit image to window (zoom to extent) |
+| T | Toggle polygon fill on/off |
 | 1-9 | Select annotation class |
 | 0 | Activate Erase mode |
 
@@ -174,7 +176,8 @@ The auto-generated `data/dataset_config.json` controls how bands are mapped to R
 | Q | Select | Click polygons to select; bulk delete or change class |
 | E | Edit | Drag vertices to reshape existing polygons |
 | X | Delete | Click a polygon to remove it |
-| M | Predict | Run DL model inference on current area |
+| T | Fill toggle | Toggle polygon fill on/off (outlines only when off) |
+| M | Predict | Run DL model inference; preview shown before accepting |
 | Ctrl+Z | Undo | Revert last change (up to 5 levels) |
 | -- | Dissolve | Merge overlapping polygons of the same class (toolbar button) |
 
@@ -210,7 +213,7 @@ Export annotations from the sidebar:
 - **Export Complete** -- all areas marked complete
 - **Export All** -- all annotated areas
 
-Exports produce GeoJSON and Shapefile in `data/trainingPolygons/`, reprojected to the native CRS.
+Exports produce GeoJSON and Shapefile in `data/trainingPolygons/`, reprojected to the native CRS. Field names are output as `classname` and `classvalue` (no underscores) for compatibility with ArcGIS deep learning tools.
 
 ## Remote Access (Cloudflare Tunnel)
 

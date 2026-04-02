@@ -48,6 +48,11 @@ const App = (() => {
             Annotations.dissolveOverlapping();
         });
 
+        // Fill opacity toggle button
+        document.getElementById('btn-fill-toggle').addEventListener('click', () => {
+            _toggleFill();
+        });
+
         // Undo button
         document.getElementById('btn-undo').addEventListener('click', () => {
             Annotations.undo();
@@ -69,6 +74,7 @@ const App = (() => {
         Drawing.deactivateAll();
         if (SAM.isActive()) SAM.deactivate();
         if (Select.isActive()) Select.deactivate();
+        ModelPredict.clearPreviewOnAreaChange();
 
         await MapModule.loadArea(areaId);
         await Annotations.loadForArea(areaId);
@@ -79,6 +85,13 @@ const App = (() => {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ last_viewed: areaId }),
         });
+    }
+
+    function _toggleFill() {
+        const current = Annotations.getFillOpacity();
+        const next = current > 0 ? 0 : 0.3;
+        Annotations.setFillOpacity(next);
+        document.getElementById('btn-fill-toggle').classList.toggle('active', next === 0);
     }
 
     function _onKeyDown(e) {
@@ -131,6 +144,10 @@ const App = (() => {
             case 'W':
                 MapModule.fitToImage();
                 break;
+            case 't':
+            case 'T':
+                _toggleFill();
+                break;
             case 'm':
             case 'M':
                 if (!Drawing.isActive() && !SAM.isActive()) {
@@ -143,6 +160,8 @@ const App = (() => {
             case 'Enter':
                 if (SAM.isActive()) {
                     SAM.acceptCurrent();
+                } else if (document.getElementById('predict-action-bar').style.display !== 'none') {
+                    document.getElementById('predict-accept').click();
                 } else if (Drawing.isEditActive()) {
                     Drawing.toggleEdit();
                 }
