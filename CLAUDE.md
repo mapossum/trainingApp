@@ -53,12 +53,13 @@ taskkill /F /IM python.exe
 - `static/js/app.js` — Main orchestrator, keyboard shortcuts, initialization
 - `static/js/map.js` — Leaflet map with Esri World Imagery basemap, image overlay
 - `static/js/dataset_config.js` — Band assignment dropdowns, stretch controls, applies changes via API
-- `static/js/annotations.js` — GeoJSON annotation layer with debounced auto-save (1s), dissolve, erase, 5-level undo stack
+- `static/js/annotations.js` — GeoJSON annotation layer with debounced auto-save (1s), dissolve, erase, 5-level undo stack, polygon notes
 - `static/js/drawing.js` — Polygon draw, freehand draw, edit, delete via Leaflet-Geoman. Supports erase mode
 - `static/js/sam.js` — SAM2 click-to-segment with preview, accept/clear action bar. Supports erase mode
 - `static/js/select.js` — Select mode: click polygons to select, then bulk delete or change class via action bar
+- `static/js/notes.js` — Slide-out notes panel: per-image note textarea + annotation list with click-to-open-popup
 - `static/js/model_predict.js` — Predict button: runs DL model inference on current area, adds polygons to map
-- `static/js/sidebar.js` — Training area list, sorting, navigation, export buttons (current/complete/all)
+- `static/js/sidebar.js` — Training area list, sorting, navigation, export buttons, share button, image-note dot indicator
 - `static/js/classes.js` — Class selector from config.json with Erase pseudo-class
 
 ### Data Structure
@@ -147,6 +148,11 @@ sam2_weights/               # SAM2 checkpoint (.pt file) — shared across datas
 - **Fill opacity toggle**: `_fillOpacity` state in annotations.js, `setFillOpacity()`/`getFillOpacity()` API. T key and Fill button toggle between 0.3 and 0. Select module uses `getFillOpacity()` on unselect to stay consistent
 - **Export field names**: `class_name`→`classname`, `class_value`→`classvalue` at export time in export.py (rename columns on GeoDataFrame). Internal app continues to use underscored names
 - **Toolbar ribbon**: toolbar moved from floating absolute overlay to fixed bottom ribbon (`flex-shrink:0` in flex column). Map flexes to fill remaining space — no occlusion. `flex-wrap:wrap` handles overflow. Responsive breakpoints at 1300px and 1050px shrink padding/font-size
+- **Polygon notes**: each annotation has an optional text note stored in `feature.properties.note`. Shown as a Leaflet tooltip on hover (`.note-tooltip` CSS class) and editable via textarea in the click popup. Note saved on blur; tooltip updated live
+- **Notes panel**: `notes.js` creates a 280px slide-out panel anchored to right edge of map container. 28px tab ("Notes") always visible; clicking it toggles the panel open/closed. Panel contains: image note textarea (saved to `app_state.json` image_notes on blur) + scrollable annotation list (color swatch, class name, note excerpt; click row opens polygon popup). Panel refreshes on every annotation change
+- **Image note dot**: sidebar area list shows a small yellow dot (`.note-dot`) next to the green complete checkmark when an area has a saved image note. Updated live via `Sidebar.updateImageNote()` called from notes.js on blur
+- **Deep link**: `?area=<id>` URL parameter loads a specific area on startup (takes priority over last_viewed). Share button (SVG network-share icon) in sidebar nav-controls copies the current area's deep link URL to clipboard via `navigator.clipboard`
+- **app_state.json image_notes**: `annotation_store.update_state()` deep-merges `image_notes` the same as `complete` — updating one area's note never overwrites other areas
 
 ## Keyboard Shortcuts
 - **Left/Right arrows**: Previous/next training area

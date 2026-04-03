@@ -4,10 +4,12 @@ const Sidebar = (() => {
     let _sortedAreas = [];
     let _currentIndex = -1;
     let _sortBy = 'ortho_name';
+    let _imageNotes = {};
 
     function init(areas, state) {
         _areas = areas;
         _sortBy = (state && state.sort_by) || 'ortho_name';
+        _imageNotes = (state && state.image_notes) || {};
 
         // Set initial sort button state
         document.getElementById('sort-name').classList.toggle('active', _sortBy === 'ortho_name');
@@ -21,6 +23,7 @@ const Sidebar = (() => {
         document.getElementById('btn-export-complete').addEventListener('click', _exportComplete);
         document.getElementById('btn-export-all').addEventListener('click', _exportAll);
         document.getElementById('chk-complete').addEventListener('change', _toggleComplete);
+        document.getElementById('btn-share').addEventListener('click', () => App.shareCurrentArea());
 
         _sort();
         _render();
@@ -74,6 +77,13 @@ const Sidebar = (() => {
             div.appendChild(oidSpan);
             div.appendChild(nameSpan);
             div.appendChild(badge);
+
+            if (_imageNotes[area.id]) {
+                const dot = document.createElement('span');
+                dot.className = 'note-dot';
+                dot.title = 'Has image note';
+                div.appendChild(dot);
+            }
 
             if (area.complete) {
                 const check = document.createElement('span');
@@ -197,5 +207,14 @@ const Sidebar = (() => {
         return null;
     }
 
-    return { init, prev, next, goToArea, updateAnnotationCount, getCurrentArea };
+    function updateImageNote(areaId, hasNote) {
+        if (hasNote) {
+            _imageNotes[areaId] = true;
+        } else {
+            delete _imageNotes[areaId];
+        }
+        _render();
+    }
+
+    return { init, prev, next, goToArea, updateAnnotationCount, getCurrentArea, updateImageNote };
 })();

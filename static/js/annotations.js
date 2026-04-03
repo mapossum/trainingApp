@@ -30,9 +30,16 @@ const Annotations = (() => {
     }
 
     function _onEachFeature(feature, layer) {
+        // Ensure every feature has a unique id
+        if (!feature.properties.id) {
+            feature.properties.id = Math.random().toString(36).substring(2, 10);
+        }
+        // Bind tooltip if note exists
+        if (feature.properties.note) {
+            layer.bindTooltip(feature.properties.note, { sticky: true, className: 'note-tooltip' });
+        }
         layer.on('click', (e) => {
             L.DomEvent.stopPropagation(e);
-            // If Select mode is active, delegate to Select module
             if (typeof Select !== 'undefined' && Select.isActive()) {
                 Select.toggleFeature(layer);
                 return;
@@ -48,20 +55,24 @@ const Annotations = (() => {
             `<option value="${c.value}" ${c.value === currentValue ? 'selected' : ''}>${c.name}</option>`
         ).join('');
 
+        const currentNote = feature.properties.note || '';
+
         const html = `
-            <div style="min-width:120px">
+            <div style="min-width:160px">
                 <select id="popup-class" style="width:100%;margin-bottom:6px;padding:2px">
                     ${options}
                 </select>
+                <textarea id="popup-note" placeholder="Note..." style="width:100%;height:56px;margin-bottom:6px;padding:3px;background:#222;color:#eee;border:1px solid #444;border-radius:3px;resize:vertical;font-size:12px;font-family:inherit">${currentNote}</textarea>
                 <button id="popup-delete" style="width:100%;padding:3px;background:#e74c3c;color:white;border:none;cursor:pointer;border-radius:3px">Delete</button>
             </div>
         `;
 
-        const popup = L.popup().setLatLng(latlng).setContent(html).openOn(_map);
+        L.popup().setLatLng(latlng).setContent(html).openOn(_map);
 
         // Defer event binding until popup is in DOM
         setTimeout(() => {
             const sel = document.getElementById('popup-class');
+            const noteEl = document.getElementById('popup-note');
             const del = document.getElementById('popup-delete');
             if (sel) {
                 sel.addEventListener('change', () => {
@@ -75,6 +86,21 @@ const Annotations = (() => {
                     _scheduleSave();
                 });
             }
+            if (noteEl) {
+                noteEl.addEventListener('blur', () => {
+                    const newNote = noteEl.value.trim();
+                    const oldNote = feature.properties.note || '';
+                    if (newNote !== oldNote) {
+                        feature.properties.note = newNote || undefined;
+                        layer.unbindTooltip();
+                        if (newNote) {
+                            layer.bindTooltip(newNote, { sticky: true, className: 'note-tooltip' });
+                        }
+                        _scheduleSave();
+                        if (typeof Notes !== 'undefined') Notes.refreshAnnotations();
+                    }
+                });
+            }
             if (del) {
                 del.addEventListener('click', () => {
                     pushUndo();
@@ -84,6 +110,16 @@ const Annotations = (() => {
                 });
             }
         }, 50);
+    }
+
+    function openPopupForId(id) {
+        _layer.eachLayer(layer => {
+            if (layer.feature && layer.feature.properties.id === id) {
+                const bounds = layer.getBounds ? layer.getBounds() : null;
+                const latlng = bounds ? bounds.getCenter() : layer.getLatLng();
+                _showPopup(layer.feature, layer, latlng);
+            }
+        });
     }
 
     async function loadForArea(areaId) {
@@ -287,5 +323,6 @@ const Annotations = (() => {
         init, loadForArea, addFeature, removeLayer, getLayer, getFeatureCollection,
         triggerSave, onChange, refreshStyles, setFillOpacity, getFillOpacity,
         setInteractive, dissolveOverlapping, eraseWithPolygon, pushUndo, undo, getUndoCount,
+        openPopupForId,
     };
 })();

@@ -24,6 +24,7 @@ const App = (() => {
         Drawing.init(_map);
         await SAM.init(_map);
         Select.init(_map);
+        Notes.init();
         await DatasetConfig.init();
         await ModelPredict.init(_map);
         Sidebar.init(areas, state);
@@ -34,12 +35,13 @@ const App = (() => {
             if (areaId) MapModule.reloadArea(areaId);
         });
 
-        // Track annotation changes for badge updates
+        // Track annotation changes for badge updates and notes panel refresh
         Annotations.onChange(() => {
             const areaId = MapModule.getCurrentAreaId();
             if (areaId) {
                 const fc = Annotations.getFeatureCollection();
                 Sidebar.updateAnnotationCount(areaId, fc.features.length);
+                Notes.refreshAnnotations();
             }
         });
 
@@ -58,8 +60,12 @@ const App = (() => {
             Annotations.undo();
         });
 
-        // Load last viewed area or first area
-        if (state.last_viewed && areas.find(a => a.id === state.last_viewed)) {
+        // Load area: deep link ?area= param takes priority, then last viewed, then first
+        const urlParams = new URLSearchParams(window.location.search);
+        const deepLinkArea = urlParams.get('area');
+        if (deepLinkArea && areas.find(a => a.id === deepLinkArea)) {
+            Sidebar.goToArea(deepLinkArea);
+        } else if (state.last_viewed && areas.find(a => a.id === state.last_viewed)) {
             Sidebar.goToArea(state.last_viewed);
         } else if (areas.length > 0) {
             Sidebar.goToArea(areas[0].id);
@@ -78,6 +84,7 @@ const App = (() => {
 
         await MapModule.loadArea(areaId);
         await Annotations.loadForArea(areaId);
+        await Notes.loadForArea(areaId);
 
         // Save last viewed
         fetch('/api/state', {
@@ -200,8 +207,18 @@ const App = (() => {
         setTimeout(() => el.remove(), 3000);
     }
 
+    function shareCurrentArea() {
+        const area = Sidebar.getCurrentArea();
+        if (!area) return;
+        const url = `${window.location.origin}${window.location.pathname}?area=${encodeURIComponent(area.id)}`;
+        navigator.clipboard.writeText(url).then(
+            () => toast('Link copied to clipboard', 'success'),
+            () => toast('Copy failed — copy manually: ' + url, 'error')
+        );
+    }
+
     // Start
     document.addEventListener('DOMContentLoaded', init);
 
-    return { loadArea, toast };
+    return { loadArea, toast, shareCurrentArea };
 })();

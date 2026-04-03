@@ -61,8 +61,8 @@ def update_state(updates):
     """Merge updates into existing state."""
     state = load_state()
     for key, value in updates.items():
-        if key == "complete" and isinstance(value, dict):
-            state.setdefault("complete", {}).update(value)
+        if key in ("complete", "image_notes") and isinstance(value, dict):
+            state.setdefault(key, {}).update(value)
         else:
             state[key] = value
     save_state(state)

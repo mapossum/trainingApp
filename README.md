@@ -17,6 +17,9 @@ Designed for remote sensing workflows: load GeoTIFFs in any projection, any band
 - **Dissolve overlapping polygons** -- merge overlapping polygons of the same class into unified polygons
 - **Smart navigation** -- switching areas preserves the current map view; only re-centers when the new image is off-screen. Fit-to-image button (W) for manual zoom-to-extent
 - **Fill opacity toggle** -- press T or the Fill button to hide polygon fills and see just outlines, useful for checking polygon accuracy against the image below
+- **Polygon notes** -- attach a text note to any annotation polygon; shown as a tooltip on hover and editable in the click popup
+- **Image notes + slide-out panel** -- per-image note textarea in a collapsible right-edge panel. Panel also lists all annotations for the current image with color, class, and note excerpt. Yellow dot in the sidebar marks images that have notes
+- **Deep link + share** -- `?area=<id>` URL parameter jumps directly to a specific image. Share button (icon) in the sidebar copies the current area's URL to clipboard
 - **Multi-dataset support** -- run multiple instances on different ports with `--data` and `--port` CLI args
 - **Auto-save** -- annotations are saved automatically with 1-second debounce
 - **Export** -- export current, complete, or all areas as GeoJSON + Shapefile with CRS reprojection
@@ -202,6 +205,20 @@ Press **0** or click the Erase button in the class selector. While active, any p
 3. Use the action bar to change class or delete all selected
 4. Press **Escape** or **Q** to exit
 
+### Notes
+
+Click any annotation polygon to open its popup — a textarea at the bottom of the popup lets you add or edit a note. The note appears as a tooltip when hovering over the polygon.
+
+The **Notes panel** slides out from the right edge of the map (click the "Notes" tab). It shows:
+- An **image note** textarea for general notes about the current image (saved automatically on blur)
+- An **annotation list** showing all polygons for the current image — click any row to open that polygon's popup
+
+Areas with an image note show a small **yellow dot** in the sidebar list.
+
+### Sharing / Deep Links
+
+Click the share icon button in the sidebar nav to copy a direct URL (`?area=<id>`) to the current image to your clipboard. Paste it to share a specific image with a collaborator or bookmark it for later.
+
 ### Completion Tracking
 
 Mark areas as complete using the checkbox in the sidebar. Export by completion status using the **Export Complete** button.
@@ -248,8 +265,9 @@ trainingApp/
     drawing.js           # Polygon/freehand drawing via Leaflet-Geoman
     sam.js               # SAM2 click-to-segment UI
     select.js            # Select mode: click to select, bulk edit/delete
+    notes.js             # Slide-out notes panel: image notes + annotation list
     model_predict.js     # DL model prediction UI, model selector dropdown
-    sidebar.js           # Training area list, navigation, export buttons
+    sidebar.js           # Training area list, navigation, export, share button
     classes.js           # Class selector with Erase pseudo-class
 ```
 
