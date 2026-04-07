@@ -4,6 +4,8 @@ const MapModule = (() => {
     let _imageOverlay = null;
     let _currentAreaId = null;
     let _firstLoad = true;
+    let _bgConfig = {};       // ortho_name (lowercase) -> tile URL
+    let _customBasemap = null; // currently active custom tile layer
 
     function init() {
         _map = L.map('map', {
@@ -51,6 +53,41 @@ const MapModule = (() => {
         return _currentAreaId;
     }
 
+    function setBgConfig(cfg) {
+        // Store with lowercase keys for case-insensitive matching
+        _bgConfig = {};
+        for (const [key, url] of Object.entries(cfg)) {
+            _bgConfig[key.toLowerCase()] = url;
+        }
+    }
+
+    function _updateBasemap(areaId) {
+        // Parse ortho_name from areaId (strip _OID<n> suffix)
+        const orthoName = areaId.replace(/_OID\d+$/i, '').toLowerCase();
+        const url = _bgConfig[orthoName];
+
+        if (url) {
+            // Swap in custom basemap if not already showing this one
+            if (!_customBasemap || _customBasemap._url !== url) {
+                if (_customBasemap) {
+                    _map.removeLayer(_customBasemap);
+                }
+                _customBasemap = L.tileLayer(url, {
+                    maxZoom: 30,
+                    maxNativeZoom: 22,
+                }).addTo(_map);
+                // Keep image overlay on top
+                if (_imageOverlay) _imageOverlay.bringToFront();
+            }
+        } else {
+            // No custom basemap for this area — remove any existing one
+            if (_customBasemap) {
+                _map.removeLayer(_customBasemap);
+                _customBasemap = null;
+            }
+        }
+    }
+
     async function loadArea(areaId) {
         _currentAreaId = areaId;
 
@@ -64,6 +101,9 @@ const MapModule = (() => {
         const resp = await fetch(`/api/tiff/${areaId}/bounds`);
         const data = await resp.json();
         const bounds = L.latLngBounds(data.bounds);
+
+        // Swap basemap before adding overlay
+        _updateBasemap(areaId);
 
         // Add image overlay
         _imageOverlay = L.imageOverlay(`/api/tiff/${areaId}/image.png`, bounds, {
@@ -103,5 +143,5 @@ const MapModule = (() => {
         }).addTo(_map);
     }
 
-    return { init, getMap, getCurrentAreaId, loadArea, reloadArea, fitToImage };
+    return { init, getMap, getCurrentAreaId, loadArea, reloadArea, fitToImage, setBgConfig };
 })();

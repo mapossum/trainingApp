@@ -7,18 +7,21 @@ const App = (() => {
         _map = MapModule.init();
 
         // Fetch config and training areas in parallel
-        const [configResp, areasResp, stateResp, sam2StatusResp] = await Promise.all([
+        const [configResp, areasResp, stateResp, sam2StatusResp, bgConfigResp] = await Promise.all([
             fetch('/api/config'),
             fetch('/api/training-areas'),
             fetch('/api/state'),
             fetch('/api/sam2/status').catch(() => ({ json: () => ({ available: false }) })),
+            fetch('/api/bg-config').catch(() => ({ json: () => ({}) })),
         ]);
 
         const classes = await configResp.json();
         const areas = await areasResp.json();
         const state = await stateResp.json();
+        const bgConfig = await bgConfigResp.json();
 
         // Initialize modules
+        MapModule.setBgConfig(bgConfig);
         Classes.init(classes);
         Annotations.init(_map);
         Drawing.init(_map);

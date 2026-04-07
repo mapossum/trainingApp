@@ -96,6 +96,21 @@ def get_config():
     return jsonify(classes)
 
 
+@app.route('/api/bg-config')
+def get_bg_config():
+    path = os.path.join(config.DATA_DIR, 'bg_config.json')
+    if not os.path.exists(path):
+        return jsonify({})
+    with open(path, 'r') as f:
+        data = json.load(f)
+    # Normalize DroneDeploy-style placeholders to standard Leaflet {z}/{x}/{y}
+    normalized = {}
+    for key, url in data.items():
+        url = url.replace('{level}', '{z}').replace('{col}', '{x}').replace('{row}', '{y}')
+        normalized[key] = url
+    return jsonify(normalized)
+
+
 @app.route('/api/dataset-config')
 def get_dataset_config():
     cfg = dscfg.load()
