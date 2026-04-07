@@ -232,14 +232,15 @@ def predict(model_name, tiff_path, transform, native_crs, horizontal_crs, pixel_
         tiles = _generate_tiles(H, W, tile_size, overlap)
         logger.info(f"Generated {len(tiles)} tiles ({tile_size}x{tile_size}, overlap={overlap})")
 
-        # Normalization setup
+        # Normalization setup — slice stats to actual band count (C) so that
+        # a model whose .emd has more NormalizationStats entries than bands
+        # extracted (e.g. 4-stat .emd with 3-band ExtractBands) doesn't fail.
         if is_multispectral and norm_stats:
-            # Use per-band stats from .emd (scaled to 0-1 range)
-            band_min = np.array(norm_stats['band_min_values'], dtype=np.float32)
-            band_max = np.array(norm_stats['band_max_values'], dtype=np.float32)
+            band_min = np.array(norm_stats['band_min_values'][:C], dtype=np.float32)
+            band_max = np.array(norm_stats['band_max_values'][:C], dtype=np.float32)
             band_range = np.maximum(band_max - band_min, 1.0)
-            scaled_mean = np.array(norm_stats['scaled_mean_values'], dtype=np.float32)
-            scaled_std = np.array(norm_stats['scaled_std_values'], dtype=np.float32)
+            scaled_mean = np.array(norm_stats['scaled_mean_values'][:C], dtype=np.float32)
+            scaled_std = np.array(norm_stats['scaled_std_values'][:C], dtype=np.float32)
             use_custom_norm = True
         elif is_imagenet:
             mean = np.array([0.485, 0.456, 0.406], dtype=np.float32)
