@@ -24,9 +24,15 @@ Then open `http://127.0.0.1:5000` in a browser.
 
 Run multiple datasets simultaneously:
 ```powershell
-python -u app.py --data data_seagrass --port 5000
-python -u app.py --data data --port 5001
-python -u app.py --data data_conch --port 5003
+python -u app.py --data data_seagrass    --port 5000
+python -u app.py --data data             --port 5001
+python -u app.py --data data_conch       --port 5003
+python -u app.py --data data_phragmites  --port 5007
+```
+
+Or use `restart.py` to start all apps + Cloudflare tunnel at once:
+```powershell
+python restart.py
 ```
 
 **Important**: Always use `-u` flag for unbuffered output so logs appear in real time.
@@ -212,10 +218,15 @@ To expose the app to offsite collaborators without VPN or firewall changes:
 4. Start the tunnel: `cloudflared tunnel --url http://localhost:5003`
 5. Share the generated `*.trycloudflare.com` URL with collaborators
 
+### Active named tunnel
+Single tunnel (`0c93bc83`) routes all four hostnames via `~/.cloudflared/config.yml`:
+- conch.mapossum.org → localhost:5003
+- palmata.mapossum.org → localhost:5001
+- phragmites.mapossum.org → localhost:5007
+
 ### Notes
-- Quick tunnels (no Cloudflare account needed) generate a random URL each time
-- For a stable URL, create a named tunnel: `cloudflared tunnel create <name>` then configure DNS
-- Each dataset/port needs its own tunnel if exposing multiple datasets
+- Named tunnel started with: `cloudflared tunnel run` (reads config.yml automatically)
+- cloudflared installed at: `C:\Program Files (x86)\cloudflared\cloudflared.exe`
+- `restart.py` starts all apps + tunnel together
 - Tunnels handle HTTPS automatically — collaborators access via `https://`
 - Basic auth credentials are sent over HTTPS so they're encrypted in transit
-- To stop: Ctrl+C the cloudflared process

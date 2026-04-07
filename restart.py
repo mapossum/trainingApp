@@ -17,9 +17,10 @@ CLOUDFLARED = r"C:\Program Files (x86)\cloudflared\cloudflared.exe"
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
 
 APPS = [
-    {"data": "data_seagrass", "port": 5000},
-    {"data": "data",          "port": 5001},
-    {"data": "data_conch",    "port": 5003},
+    {"data": "data_seagrass",    "port": 5000},
+    {"data": "data",             "port": 5001},
+    {"data": "data_conch",       "port": 5003},
+    {"data": "data_phragmites",  "port": 5007},
 ]
 
 STARTUP_WAIT = 15   # seconds to wait before checking health
@@ -30,14 +31,32 @@ LOG_LINES    = 3    # tail lines to show per app
 
 def kill_all():
     print("Killing existing processes...")
-    for name in ("python.exe", "cloudflared.exe"):
-        result = subprocess.run(
-            ["taskkill", "/F", "/IM", name],
-            capture_output=True, text=True
-        )
-        for line in result.stdout.splitlines():
-            if line.strip():
-                print(f"  {line.strip()}")
+
+    # Kill python.exe processes except this script itself
+    current_pid = os.getpid()
+    result = subprocess.run(
+        ["tasklist", "/FI", "IMAGENAME eq python.exe", "/FO", "CSV", "/NH"],
+        capture_output=True, text=True
+    )
+    for line in result.stdout.splitlines():
+        parts = line.replace('"', '').split(',')
+        if len(parts) >= 2:
+            try:
+                pid = int(parts[1].strip())
+                if pid != current_pid:
+                    r = subprocess.run(["taskkill", "/F", "/PID", str(pid)], capture_output=True, text=True)
+                    msg = r.stdout.strip()
+                    if msg:
+                        print(f"  {msg}")
+            except ValueError:
+                pass
+
+    # Kill cloudflared
+    result = subprocess.run(["taskkill", "/F", "/IM", "cloudflared.exe"], capture_output=True, text=True)
+    for line in result.stdout.splitlines():
+        if line.strip():
+            print(f"  {line.strip()}")
+
     time.sleep(2)
 
 
